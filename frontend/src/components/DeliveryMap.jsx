@@ -8,6 +8,7 @@ import {
 
 import { useEffect } from "react";
 import L from "leaflet";
+import "./DeliveryMap.css";
 
 
 // ======================================================
@@ -33,27 +34,12 @@ const clienteIcon = new L.Icon({
 // ======================================================
 
 const repartidorIcon = L.divIcon({
-    className: "",
-
+    className: "adomi-map__driver-marker",
     html: `
-        <div
-            style="
-                width: 42px;
-                height: 42px;
-                background: #0d6efd;
-                border: 3px solid white;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 3px 10px rgba(0,0,0,.30);
-                font-size: 21px;
-            "
-        >
-            🚗
+        <div class="adomi-map__driver-marker-inner">
+            <i class="bi bi-scooter"></i>
         </div>
     `,
-
     iconSize: [42, 42],
     iconAnchor: [21, 21],
     popupAnchor: [0, -23]
@@ -262,39 +248,16 @@ function DeliveryMap({
 
         return (
 
-            <div
-                className="border rounded-4 bg-light d-flex align-items-center justify-content-center text-center p-4"
-                style={{
-                    minHeight: "180px"
-                }}
-            >
-
-                <div>
-
-                    <div
-                        style={{
-                            fontSize: "35px"
-                        }}
-                    >
-                        📍
-                    </div>
-
-
-                    <div className="fw-semibold mt-2">
-
-                        Ubicación no disponible
-
-                    </div>
-
-
-                    <small className="text-muted">
-
-                        Todavía no existen coordenadas válidas para mostrar.
-
-                    </small>
-
+            <div className="adomi-map__empty">
+                <span className="adomi-map__empty-icon">
+                    <i className="bi bi-geo-alt"></i>
+                </span>
+                <div className="fw-semibold mt-2">
+                    Ubicación no disponible
                 </div>
-
+                <small className="text-muted">
+                    Todavía no existen coordenadas válidas para mostrar.
+                </small>
             </div>
         );
     }
@@ -384,16 +347,16 @@ function DeliveryMap({
 
     return (
 
-        <div className="w-100">
+        <div className="w-100 adomi-map">
 
 
             {/* ENCABEZADO OPCIONAL */}
 
             {titulo && (
 
-                <div className="d-flex justify-content-between align-items-center mb-2">
+                <div className="adomi-map__header">
 
-                    <div className="fw-semibold">
+                    <div className="adomi-map__title">
 
                         <i className="bi bi-geo-alt-fill text-danger me-2"></i>
 
@@ -421,10 +384,9 @@ function DeliveryMap({
             {/* MAPA */}
 
             <div
+                className="adomi-map__canvas"
                 style={{
-                    height: altura,
-                    width: "100%",
-                    minHeight: "220px"
+                    "--adomi-map-height": altura
                 }}
             >
 
@@ -439,13 +401,7 @@ function DeliveryMap({
                         true
                     }
 
-                    style={{
-                        height: "100%",
-                        width: "100%",
-                        borderRadius:
-                            "16px",
-                        zIndex: 1
-                    }}
+                    className="adomi-map__leaflet"
                 >
 
 
@@ -500,7 +456,7 @@ function DeliveryMap({
 
                                     <strong>
 
-                                        📍 Punto de entrega
+                                        <i className="bi bi-geo-alt-fill me-1 text-danger"></i> Punto de entrega
 
                                     </strong>
 
@@ -549,7 +505,7 @@ function DeliveryMap({
 
                                     <strong>
 
-                                        🚗 Repartidor
+                                        <i className="bi bi-scooter me-1 text-primary"></i> Repartidor
 
                                     </strong>
 
@@ -609,7 +565,7 @@ function DeliveryMap({
                     <button
                         type="button"
 
-                        className="btn btn-primary w-100 mt-3 py-2 fw-semibold"
+                        className="adomi-map__route-button"
 
                         onClick={
                             abrirRuta

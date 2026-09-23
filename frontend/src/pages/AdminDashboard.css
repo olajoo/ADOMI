@@ -1,0 +1,57 @@
+/* ADOMI Admin — sistema visual compacto y responsive */
+.adomi-admin{--aa-ink:#111827;--aa-muted:#6b7280;--aa-border:#e5e7eb;--aa-bg:#f6f8fa;--aa-accent:#2563eb;background:var(--aa-bg)!important;color:var(--aa-ink)}
+.adomi-admin__navbar{position:sticky;top:0;z-index:1030;min-height:64px;background:rgba(17,24,39,.97)!important;border-bottom:1px solid rgba(255,255,255,.06);box-shadow:0 4px 18px rgba(15,23,42,.08)!important;backdrop-filter:blur(12px)}
+.adomi-admin__main{max-width:1560px;margin:0 auto}
+.adomi-admin .card{border:1px solid rgba(226,232,240,.86)!important;box-shadow:0 4px 14px rgba(15,23,42,.045)!important}
+.adomi-admin h1,.adomi-admin h2,.adomi-admin h3,.adomi-admin h4,.adomi-admin h5{letter-spacing:-.025em}
+.adomi-admin .text-muted{color:var(--aa-muted)!important}.adomi-admin .btn{border-radius:9px;font-weight:650}.adomi-admin .badge{border-radius:999px;padding:.4rem .58rem;font-size:.7rem;font-weight:700}
+.adomi-admin .form-control,.adomi-admin .form-select,.adomi-admin .input-group-text{min-height:44px;border-color:#dfe3e8;border-radius:10px}
+.adomi-admin textarea.form-control{resize:vertical}.adomi-admin .form-control:focus,.adomi-admin .form-select:focus{border-color:#93c5fd;box-shadow:0 0 0 .2rem rgba(37,99,235,.10)}
+.adomi-admin .alert{border-radius:11px}
+
+/* navegación */
+.adomi-admin__nav-card{position:relative;min-height:132px;overflow:hidden;background:#fff;color:#111827;transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease}
+.adomi-admin__nav-card:hover{transform:translateY(-2px);border-color:#bfdbfe!important;box-shadow:0 8px 22px rgba(15,23,42,.07)!important}
+.adomi-admin__nav-card--active{border-color:#93c5fd!important;background:#eff6ff!important;box-shadow:0 7px 20px rgba(37,99,235,.08)!important}
+.adomi-admin__nav-card--active:after{content:"";position:absolute;left:18px;right:18px;bottom:0;height:4px;border-radius:4px 4px 0 0;background:#2563eb}
+.adomi-admin__nav-card--active h5{color:#1d4ed8}
+.adomi-admin__nav-card--danger{border-color:#fca5a5!important;background:#fef2f2!important}.adomi-admin__nav-card--danger:after{background:#dc2626}.adomi-admin__nav-card--danger h5{color:#b91c1c}
+
+/* tablas */
+.adomi-admin__table-wrap{border:1px solid #eef0f2;border-radius:12px;overflow:hidden}
+.adomi-admin table{margin:0}.adomi-admin thead th{padding:.8rem .75rem;background:#f8fafc;color:#6b7280;border-bottom:1px solid #e5e7eb;font-size:.72rem;font-weight:750;text-transform:uppercase;letter-spacing:.035em;white-space:nowrap}
+.adomi-admin tbody td{padding:.82rem .75rem;border-color:#f0f2f4;font-size:.88rem}.adomi-admin tbody tr:hover{background:#fafcff}
+
+/* usuarios en móvil */
+.adomi-admin__user-list{display:grid;gap:9px}.adomi-admin__user-card{padding:13px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}.adomi-admin__user-card .min-w-0{min-width:0}
+
+/* pedidos móvil ya existentes */
+.adomi-admin .d-md-none>.border.rounded-4{border-radius:12px!important;margin-bottom:9px!important;padding:13px!important}
+
+/* estadísticas */
+.adomi-admin .row.g-3.mb-4 .card h3{letter-spacing:-.04em}
+.adomi-admin__section-card{overflow:hidden}
+.adomi-admin__empty{min-height:210px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#6b7280;text-align:center}
+.adomi-admin__empty i{font-size:1.8rem;color:#16a34a}.adomi-admin__empty strong{color:#374151}
+
+/* modal */
+.adomi-admin .position-fixed .card{border-radius:16px!important}.adomi-admin .position-fixed .bg-light{background:#f8fafc!important}
+
+/* teléfono */
+@media(max-width:767.98px){
+ .adomi-admin__navbar{min-height:58px}.adomi-admin__navbar .container-fluid{padding-left:14px!important;padding-right:14px!important}.adomi-admin__navbar .navbar-brand{font-size:1rem}
+ .adomi-admin__main{padding:12px!important}.adomi-admin__main>.card:first-of-type{margin-bottom:12px!important}.adomi-admin__main>.card:first-of-type .card-body{padding:15px!important}.adomi-admin__main>.card:first-of-type h2{font-size:1.18rem}.adomi-admin__main>.card:first-of-type p{font-size:.78rem}
+ /* seis secciones como grid compacto 3x2 */
+ .adomi-admin__main>.row.g-3.mb-4{--bs-gutter-x:8px;--bs-gutter-y:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px!important}
+ .adomi-admin__main>.row.g-3.mb-4>[class*="col-"]{width:auto;padding:0}
+ .adomi-admin__nav-card{min-height:86px;height:100%;border-radius:12px!important}
+ .adomi-admin__nav-card .card-body{display:flex;min-width:0;flex-direction:column;align-items:center;justify-content:center;padding:9px 4px!important;text-align:center}
+ .adomi-admin__nav-card .fs-1{font-size:1.08rem!important;margin-bottom:4px!important;line-height:1}.adomi-admin__nav-card h5{margin:0!important;font-size:.7rem;line-height:1.1;overflow-wrap:anywhere}.adomi-admin__nav-card p{display:none}
+ .adomi-admin__nav-card--active:after{left:18%;right:18%;height:3px}
+ .adomi-admin .card-body.p-4,.adomi-admin .card-body.p-3.p-md-4{padding:14px!important}.adomi-admin h4{font-size:1.05rem}
+ .adomi-admin .form-control,.adomi-admin .form-select{font-size:16px}.adomi-admin .btn:not(.btn-sm):not(.btn-close){min-height:42px}
+ .adomi-admin .position-fixed{padding:0!important}.adomi-admin .position-fixed .card{border-radius:16px 16px 0 0!important;max-height:94vh!important}.adomi-admin .position-fixed .card-body{padding:16px!important}
+}
+@media(max-width:380px){.adomi-admin__main{padding-left:9px!important;padding-right:9px!important}.adomi-admin__nav-card h5{font-size:.65rem}.adomi-admin__nav-card{min-height:82px}.adomi-admin .badge{font-size:.64rem}}
+@media(min-width:1400px){.adomi-admin__main{padding-left:32px!important;padding-right:32px!important}}
+@media(prefers-reduced-motion:reduce){.adomi-admin *,.adomi-admin *:before,.adomi-admin *:after{transition:none!important}}

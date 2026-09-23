@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
     BarChart,
@@ -26,8 +26,10 @@ import {
 import { reactivateCancelledOrder } from "../services/orderService";
 
 import socket from "../socket";
+import "./AdminDashboard.css";
 
 function AdminDashboard() {
+    const joinedOrderRoomsRef = useRef(new Set());
     const user = JSON.parse(localStorage.getItem("user"));
 
     const [vista, setVista] = useState("resumen");
@@ -124,9 +126,26 @@ function AdminDashboard() {
     }, []);
 
     useEffect(() => {
-        pedidos.forEach((pedido) => {
-            socket.emit("joinOrderRoom", pedido.id);
-        });
+        const joinRooms = () => {
+            pedidos.forEach((pedido) => {
+                if (!joinedOrderRoomsRef.current.has(pedido.id)) {
+                    socket.emit("joinOrderRoom", pedido.id);
+                    joinedOrderRoomsRef.current.add(pedido.id);
+                }
+            });
+        };
+
+        const handleReconnect = () => {
+            joinedOrderRoomsRef.current.clear();
+            joinRooms();
+        };
+
+        joinRooms();
+        socket.on("connect", handleReconnect);
+
+        return () => {
+            socket.off("connect", handleReconnect);
+        };
     }, [pedidos]);
 
     useEffect(() => {
@@ -509,63 +528,85 @@ function AdminDashboard() {
     };
 
     const TablaUsuarios = ({ data }) => (
-        <div className="table-responsive">
-            <table className="table align-middle">
-                <thead>
-                    <tr>
-                        <th>Código</th>
-                        <th>ID real</th>
-                        <th>Nombre</th>
-                        <th>Correo</th>
-                        <th>Rol</th>
-                        <th>Estado</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {data.map((usuario, index) => (
-                        <tr key={usuario.id}>
-                            <td>
-                                <span className="badge bg-dark px-3 py-2">
-                                    {getCodigoVisualUsuario(usuario, index)}
-                                </span>
-                            </td>
-
-                            <td>#{usuario.id}</td>
-                            <td>{usuario.nombre}</td>
-                            <td>{usuario.correo}</td>
-
-                            <td>
-                                <span className={getRolBadge(usuario.rol)}>
-                                    {usuario.rol}
-                                </span>
-                            </td>
-
-                            <td>
-                                <span className={getEstadoBadge(usuario.estado || "activo")}>
-                                    {usuario.estado || "activo"}
-                                </span>
-                            </td>
-
-                            <td>
-                                <button
-                                    className={
-                                        usuario.estado === "inactivo"
-                                            ? "btn btn-success btn-sm"
-                                            : "btn btn-danger btn-sm"
-                                    }
-                                    onClick={() => handleCambiarEstado(usuario)}
-                                >
-                                    {usuario.estado === "inactivo"
-                                        ? "Activar"
-                                        : "Desactivar"}
-                                </button>
-                            </td>
+        <div>
+            <div className="table-responsive d-none d-md-block adomi-admin__table-wrap">
+                <table className="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>ID real</th>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {data.map((usuario, index) => (
+                            <tr key={usuario.id}>
+                                <td>
+                                    <span className="badge bg-dark">
+                                        {getCodigoVisualUsuario(usuario, index)}
+                                    </span>
+                                </td>
+                                <td>#{usuario.id}</td>
+                                <td className="fw-semibold">{usuario.nombre}</td>
+                                <td>{usuario.correo}</td>
+                                <td><span className={getRolBadge(usuario.rol)}>{usuario.rol}</span></td>
+                                <td>
+                                    <span className={getEstadoBadge(usuario.estado || "activo")}>
+                                        {usuario.estado || "activo"}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button
+                                        className={usuario.estado === "inactivo"
+                                            ? "btn btn-success btn-sm"
+                                            : "btn btn-outline-danger btn-sm"}
+                                        onClick={() => handleCambiarEstado(usuario)}
+                                    >
+                                        {usuario.estado === "inactivo" ? "Activar" : "Desactivar"}
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="d-md-none adomi-admin__user-list">
+                {data.map((usuario, index) => (
+                    <div className="adomi-admin__user-card" key={usuario.id}>
+                        <div className="d-flex justify-content-between align-items-start gap-2">
+                            <div className="min-w-0">
+                                <div className="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                    <span className="badge bg-dark">
+                                        {getCodigoVisualUsuario(usuario, index)}
+                                    </span>
+                                    <span className={getEstadoBadge(usuario.estado || "activo")}>
+                                        {usuario.estado || "activo"}
+                                    </span>
+                                </div>
+                                <div className="fw-bold text-truncate">{usuario.nombre}</div>
+                                <div className="text-muted small text-break">{usuario.correo}</div>
+                            </div>
+                            <span className={getRolBadge(usuario.rol)}>{usuario.rol}</span>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center gap-2 mt-3 pt-3 border-top">
+                            <small className="text-muted">ID #{usuario.id}</small>
+                            <button
+                                className={usuario.estado === "inactivo"
+                                    ? "btn btn-success btn-sm"
+                                    : "btn btn-outline-danger btn-sm"}
+                                onClick={() => handleCambiarEstado(usuario)}
+                            >
+                                {usuario.estado === "inactivo" ? "Activar" : "Desactivar"}
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 
@@ -713,9 +754,9 @@ function AdminDashboard() {
     );
 
     return (
-        <div className="min-vh-100 bg-light">
+        <div className="min-vh-100 bg-light adomi-admin">
 
-            <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+            <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm adomi-admin__navbar">
                 <div className="container-fluid px-4">
                     <span className="navbar-brand fw-bold">
                         <i className="bi bi-speedometer2 me-2"></i>
@@ -737,7 +778,7 @@ function AdminDashboard() {
                 </div>
             </nav>
 
-            <main className="container-fluid px-3 px-md-4 py-3 py-md-4">
+            <main className="container-fluid px-3 px-md-4 py-3 py-md-4 adomi-admin__main">
 
                 {mensaje && (
                     <div className="alert alert-success">
@@ -767,8 +808,8 @@ function AdminDashboard() {
 
                     <div className="col-12 col-md-6 col-xl">
                         <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
-                                vista === "resumen" ? "border border-dark" : ""
+                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-admin__nav-card ${
+                                vista === "resumen" ? "adomi-admin__nav-card--active" : ""
                             }`}
                             onClick={() => setVista("resumen")}
                         >
@@ -788,8 +829,8 @@ function AdminDashboard() {
 
                     <div className="col-12 col-md-6 col-xl">
                         <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
-                                vista === "clientes" ? "border border-primary" : ""
+                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-admin__nav-card ${
+                                vista === "clientes" ? "adomi-admin__nav-card--active" : ""
                             }`}
                             onClick={() => setVista("clientes")}
                         >
@@ -809,8 +850,8 @@ function AdminDashboard() {
 
                     <div className="col-12 col-md-6 col-xl">
                         <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
-                                vista === "repartidores" ? "border border-warning" : ""
+                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-admin__nav-card ${
+                                vista === "repartidores" ? "adomi-admin__nav-card--active" : ""
                             }`}
                             onClick={() => setVista("repartidores")}
                         >
@@ -830,8 +871,8 @@ function AdminDashboard() {
 
                     <div className="col-12 col-md-6 col-xl">
                         <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
-                                vista === "administradores" ? "border border-dark" : ""
+                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-admin__nav-card ${
+                                vista === "administradores" ? "adomi-admin__nav-card--active" : ""
                             }`}
                             onClick={() => setVista("administradores")}
                         >
@@ -851,8 +892,8 @@ function AdminDashboard() {
 
                     <div className="col-12 col-md-6 col-xl">
                         <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
-                                vista === "pedidos" ? "border border-success" : ""
+                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-admin__nav-card ${
+                                vista === "pedidos" ? "adomi-admin__nav-card--active" : ""
                             }`}
                             onClick={() => setVista("pedidos")}
                         >
@@ -865,6 +906,25 @@ function AdminDashboard() {
 
                                 <p className="text-muted mb-0">
                                     {pedidos.length} registrado(s).
+                                </p>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div className="col-12 col-md-6 col-xl">
+                        <button
+                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-admin__nav-card ${
+                                vista === "incidencias" ? "adomi-admin__nav-card--active adomi-admin__nav-card--danger" : ""
+                            }`}
+                            onClick={() => setVista("incidencias")}
+                        >
+                            <div className="card-body p-3 p-md-4">
+                                <div className="fs-1 text-danger mb-2">
+                                    <i className="bi bi-exclamation-triangle"></i>
+                                </div>
+                                <h5 className="fw-bold">Incidencias</h5>
+                                <p className="text-muted mb-0">
+                                    {incidenciasPendientes.length} pendiente(s).
                                 </p>
                             </div>
                         </button>
@@ -1281,6 +1341,37 @@ function AdminDashboard() {
                             </div>
                         </div>
                     </>
+                )}
+
+
+                {vista === "incidencias" && (
+                    <div className="card border-0 shadow-sm rounded-4 adomi-admin__section-card">
+                        <div className="card-body p-3 p-md-4">
+                            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+                                <div>
+                                    <h4 className="fw-bold mb-1">Incidencias pendientes</h4>
+                                    <p className="text-muted small mb-0">
+                                        Pedidos donde el cliente reportó un problema que todavía requiere atención.
+                                    </p>
+                                </div>
+                                <span className={`badge ${incidenciasPendientes.length ? "bg-danger" : "bg-success"}`}>
+                                    {incidenciasPendientes.length
+                                        ? `${incidenciasPendientes.length} pendiente(s)`
+                                        : "Sin pendientes"}
+                                </span>
+                            </div>
+
+                            {incidenciasPendientes.length > 0 ? (
+                                <TablaPedidos data={incidenciasPendientes} />
+                            ) : (
+                                <div className="adomi-admin__empty">
+                                    <i className="bi bi-check-circle"></i>
+                                    <strong>Todo al día</strong>
+                                    <span>No hay incidencias pendientes por resolver.</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 )}
 
             </main>

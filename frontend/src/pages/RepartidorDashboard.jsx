@@ -15,6 +15,7 @@ import { updateMyLocation } from "../services/locationService";
 import OrderChat from "../components/OrderChat";
 import DeliveryMap from "../components/DeliveryMap";
 import socket from "../socket";
+import "./RepartidorDashboard.css";
 
 
 function RepartidorDashboard() {
@@ -65,6 +66,8 @@ function RepartidorDashboard() {
     const [notificacion, setNotificacion] =
         useState("");
 
+    const [panelPedido, setPanelPedido] = useState(null);
+
 
     // =====================================================
     // FORMULARIOS
@@ -102,6 +105,7 @@ function RepartidorDashboard() {
     ] = useState("");
 
     const watchIdRef = useRef(null);
+    const joinedOrderRoomsRef = useRef(new Set());
 
     const ultimoEnvioUbicacionRef =
         useRef(0);
@@ -269,14 +273,29 @@ function RepartidorDashboard() {
 
     useEffect(() => {
 
-        entregas.forEach((pedido) => {
+        const joinRooms = () => {
+            entregas.forEach((pedido) => {
+                if (!joinedOrderRoomsRef.current.has(pedido.id)) {
+                    socket.emit(
+                        "joinOrderRoom",
+                        pedido.id
+                    );
+                    joinedOrderRoomsRef.current.add(pedido.id);
+                }
+            });
+        };
 
-            socket.emit(
-                "joinOrderRoom",
-                pedido.id
-            );
+        const handleReconnect = () => {
+            joinedOrderRoomsRef.current.clear();
+            joinRooms();
+        };
 
-        });
+        joinRooms();
+        socket.on("connect", handleReconnect);
+
+        return () => {
+            socket.off("connect", handleReconnect);
+        };
 
     }, [entregas]);
 
@@ -1312,14 +1331,14 @@ function RepartidorDashboard() {
 
     return (
 
-        <div className="min-vh-100 bg-light">
+        <div className="min-vh-100 bg-light adomi-driver">
 
 
             {/* ==========================================
                 NAVBAR
             ========================================== */}
 
-            <nav className="navbar navbar-dark bg-dark shadow-sm sticky-top">
+            <nav className="navbar navbar-dark bg-dark shadow-sm sticky-top adomi-driver__navbar">
 
                 <div className="container-fluid px-3 px-md-4">
 
@@ -1370,7 +1389,7 @@ function RepartidorDashboard() {
                 CONTENIDO
             ========================================== */}
 
-            <main className="container-fluid px-3 px-md-4 py-3 py-md-4">
+            <main className="container-fluid px-3 px-md-4 py-3 py-md-4 adomi-driver__main">
 
 
                 {/* NOTIFICACIONES */}
@@ -1418,7 +1437,7 @@ function RepartidorDashboard() {
                     CABECERA
                 ====================================== */}
 
-                <div className="card border-0 shadow-sm rounded-4 mb-3">
+                <div className="card border-0 shadow-sm rounded-4 mb-3 adomi-driver__detail-card">
 
                     <div className="card-body p-3 p-md-4">
 
@@ -1599,10 +1618,10 @@ function RepartidorDashboard() {
 
                         <button
                             type="button"
-                            className={`btn w-100 h-100 py-3 rounded-4 ${
+                            className={`btn w-100 h-100 py-3 rounded-4 adomi-driver__tab ${
                                 vista === "pendientes"
-                                    ? "btn-warning"
-                                    : "btn-light border"
+                                    ? "adomi-driver__tab--active"
+                                    : ""
                             }`}
                             onClick={() =>
                                 setVista("pendientes")
@@ -1626,10 +1645,10 @@ function RepartidorDashboard() {
 
                         <button
                             type="button"
-                            className={`btn w-100 h-100 py-3 rounded-4 ${
+                            className={`btn w-100 h-100 py-3 rounded-4 adomi-driver__tab ${
                                 vista === "activa"
-                                    ? "btn-primary"
-                                    : "btn-light border"
+                                    ? "adomi-driver__tab--active"
+                                    : ""
                             }`}
                             onClick={() =>
                                 setVista("activa")
@@ -1653,10 +1672,10 @@ function RepartidorDashboard() {
 
                         <button
                             type="button"
-                            className={`btn w-100 h-100 py-3 rounded-4 ${
+                            className={`btn w-100 h-100 py-3 rounded-4 adomi-driver__tab ${
                                 vista === "historial"
-                                    ? "btn-success"
-                                    : "btn-light border"
+                                    ? "adomi-driver__tab--active"
+                                    : ""
                             }`}
                             onClick={() =>
                                 setVista("historial")
@@ -1749,7 +1768,7 @@ function RepartidorDashboard() {
                                                 key={pedido.id}
                                             >
 
-                                                <div className="card border h-100 rounded-4">
+                                                <div className="card border h-100 rounded-4 adomi-driver__order-card">
 
                                                     <div className="card-body p-3">
 
@@ -1961,7 +1980,7 @@ function RepartidorDashboard() {
                                                 <button
                                                     type="button"
                                                     key={pedido.id}
-                                                    className={`card w-100 text-start rounded-4 mb-2 ${
+                                                    className={`card w-100 text-start rounded-4 mb-2 adomi-driver__delivery-card ${
                                                         entregaSeleccionada?.id ===
                                                         pedido.id
                                                             ? "border-primary"
@@ -2168,99 +2187,6 @@ function RepartidorDashboard() {
 
                                             </div>
 
-
-                                            {/* UBICACIÓN EXACTA DEL CLIENTE */}
-
-                                            <div className="border rounded-4 p-3 mb-3">
-
-                                                <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
-
-                                                    <div>
-
-                                                        <strong className="d-block">
-
-                                                            <i className="bi bi-geo-alt-fill text-danger me-2"></i>
-
-                                                            Punto exacto de entrega
-
-                                                        </strong>
-
-                                                        <small className="text-muted">
-
-                                                            Usa este punto GPS como referencia junto con la dirección escrita por el cliente.
-
-                                                        </small>
-
-                                                    </div>
-
-                                                    {tieneUbicacionCliente(
-                                                        entregaSeleccionada
-                                                    ) && (
-
-                                                        <span className="badge bg-success">
-
-                                                            GPS disponible
-
-                                                        </span>
-
-                                                    )}
-
-                                                </div>
-
-
-                                                {tieneUbicacionCliente(
-                                                    entregaSeleccionada
-                                                ) ? (
-
-                                                    <div
-                                                        className="overflow-hidden rounded-4 border bg-light"
-                                                        style={{
-                                                            width: "100%",
-                                                            maxWidth: "100%"
-                                                        }}
-                                                    >
-                                                        <DeliveryMap
-                                                            cliente={{
-                                                                latitud:
-                                                                    entregaSeleccionada.cliente_latitud,
-
-                                                                longitud:
-                                                                    entregaSeleccionada.cliente_longitud
-                                                            }}
-
-                                                            repartidor={
-                                                                ubicacionActiva &&
-                                                                ultimaUbicacion?.latitud !== undefined &&
-                                                                ultimaUbicacion?.longitud !== undefined
-                                                                    ? {
-                                                                          latitud:
-                                                                              ultimaUbicacion.latitud,
-
-                                                                          longitud:
-                                                                              ultimaUbicacion.longitud
-                                                                      }
-                                                                    : null
-                                                            }
-
-                                                            titulo=""
-                                                            mostrarRuta={true}
-                                                            altura="clamp(230px, 42vw, 320px)"
-                                                        />
-                                                    </div>
-
-                                                ) : (
-
-                                                    <div className="alert alert-warning mb-0">
-
-                                                        <i className="bi bi-exclamation-triangle me-2"></i>
-
-                                                        Este pedido no tiene una ubicación GPS del cliente. Probablemente fue creado antes de activar esta función.
-
-                                                    </div>
-
-                                                )}
-
-                                            </div>
 
 
                                             {/* TOTALES */}
@@ -2539,6 +2465,23 @@ function RepartidorDashboard() {
                                             </div>
 
 
+                                            {/* HERRAMIENTAS BAJO DEMANDA */}
+                                            <div className="adomi-driver__tools mb-3">
+                                                <div>
+                                                    <strong className="d-block mb-1">Herramientas del pedido</strong>
+                                                    <small className="text-muted">Abre el mapa o el chat únicamente cuando lo necesites.</small>
+                                                </div>
+                                                <div className="adomi-driver__tools-actions">
+                                                    <button type="button" className="btn btn-outline-primary" disabled={!tieneUbicacionCliente(entregaSeleccionada)} onClick={() => setPanelPedido("mapa")}>
+                                                        <i className="bi bi-map me-2"></i>Ver ubicación
+                                                    </button>
+                                                    <button type="button" className="btn btn-dark" onClick={() => setPanelPedido("chat")}>
+                                                        <i className="bi bi-chat-dots me-2"></i>Abrir chat
+                                                    </button>
+                                                </div>
+                                            </div>
+
+
                                             {/* PASO 3 - ENTREGA */}
 
                                             <div className="border rounded-4 p-3">
@@ -2669,30 +2612,7 @@ function RepartidorDashboard() {
                                     </div>
 
 
-                                    {/* CHAT */}
 
-                                    <div className="card border-0 shadow-sm rounded-4">
-
-                                        <div className="card-body p-3 p-md-4">
-
-                                            <h5 className="fw-bold mb-3">
-
-                                                <i className="bi bi-chat-dots me-2"></i>
-
-                                                Chat con cliente
-
-                                            </h5>
-
-
-                                            <OrderChat
-                                                pedidoId={
-                                                    entregaSeleccionada.id
-                                                }
-                                            />
-
-                                        </div>
-
-                                    </div>
 
                                 </>
 
@@ -2744,7 +2664,7 @@ function RepartidorDashboard() {
                                                 <button
                                                     type="button"
                                                     key={pedido.id}
-                                                    className={`card w-100 text-start rounded-4 mb-2 ${
+                                                    className={`card w-100 text-start rounded-4 mb-2 adomi-driver__delivery-card ${
                                                         historialSeleccionado?.id ===
                                                         pedido.id
                                                             ? "border-success"
@@ -2982,6 +2902,24 @@ function RepartidorDashboard() {
 
                     </div>
 
+                )}
+
+
+                {panelPedido && entregaSeleccionada && (
+                    <div className="adomi-driver__overlay" onMouseDown={() => setPanelPedido(null)}>
+                        <div className="adomi-driver__modal" onMouseDown={(e) => e.stopPropagation()}>
+                            <div className="adomi-driver__modal-header">
+                                <div><small className="text-muted">Pedido #{entregaSeleccionada.id}</small><h5 className="fw-bold mb-0">{panelPedido === "mapa" ? "Ubicación de entrega" : "Chat con cliente"}</h5></div>
+                                <button type="button" className="btn-close" aria-label="Cerrar" onClick={() => setPanelPedido(null)}></button>
+                            </div>
+                            <div className="adomi-driver__modal-body">
+                                {panelPedido === "mapa" && tieneUbicacionCliente(entregaSeleccionada) && (
+                                    <DeliveryMap cliente={{latitud: entregaSeleccionada.cliente_latitud, longitud: entregaSeleccionada.cliente_longitud}} repartidor={ubicacionActiva && ultimaUbicacion?.latitud !== undefined && ultimaUbicacion?.longitud !== undefined ? {latitud: ultimaUbicacion.latitud, longitud: ultimaUbicacion.longitud} : null} titulo="Punto exacto de entrega" mostrarRuta={true} altura="min(58vh, 520px)" />
+                                )}
+                                {panelPedido === "chat" && <OrderChat pedidoId={entregaSeleccionada.id} />}
+                            </div>
+                        </div>
+                    </div>
                 )}
 
             </main>

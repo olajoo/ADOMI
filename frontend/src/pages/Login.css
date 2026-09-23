@@ -1,0 +1,490 @@
+.adomi-login {
+    --login-primary: #111827;
+    --login-accent: #16a34a;
+    --login-accent-dark: #15803d;
+    --login-text: #111827;
+    --login-muted: #6b7280;
+    --login-border: #e5e7eb;
+    --login-surface: #ffffff;
+    --login-background: #f8fafc;
+
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(440px, 0.95fr);
+    background: var(--login-background);
+    color: var(--login-text);
+    overflow: hidden;
+}
+
+.adomi-login__hero {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 85% 18%, rgba(34, 197, 94, 0.2), transparent 25%),
+        linear-gradient(145deg, #111827 0%, #172033 58%, #0f172a 100%);
+    color: #ffffff;
+}
+
+.adomi-login__hero-content {
+    position: relative;
+    z-index: 2;
+    min-height: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: clamp(32px, 5vw, 72px);
+    display: flex;
+    flex-direction: column;
+}
+
+.adomi-login__brand,
+.adomi-login__mobile-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.adomi-login__brand-icon {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    background: var(--login-accent);
+    color: #ffffff;
+    font-size: 1.15rem;
+    box-shadow: 0 8px 24px rgba(22, 163, 74, 0.2);
+}
+
+.adomi-login__hero-copy {
+    margin: auto 0;
+    max-width: 600px;
+    padding: 72px 0;
+}
+
+.adomi-login__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-bottom: 18px;
+    padding: 7px 11px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    color: #dcfce7;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+}
+
+.adomi-login__hero h1 {
+    max-width: 570px;
+    margin: 0;
+    color: #ffffff;
+    font-size: clamp(2.8rem, 5vw, 5rem);
+    font-weight: 800;
+    line-height: 0.98;
+    letter-spacing: -0.055em;
+}
+
+.adomi-login__hero-copy > p {
+    max-width: 540px;
+    margin: 25px 0 0;
+    color: #cbd5e1;
+    font-size: clamp(1rem, 1.25vw, 1.15rem);
+    line-height: 1.7;
+}
+
+.adomi-login__features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    margin-top: 32px;
+}
+
+.adomi-login__features span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #e2e8f0;
+    font-size: 0.87rem;
+    font-weight: 600;
+}
+
+.adomi-login__features i {
+    color: #4ade80;
+    font-size: 1rem;
+}
+
+.adomi-login__hero-footer {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+
+.adomi-login__shape {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.adomi-login__shape--one {
+    width: 360px;
+    height: 360px;
+    right: -180px;
+    bottom: -150px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.adomi-login__shape--two {
+    width: 240px;
+    height: 240px;
+    right: -120px;
+    bottom: -90px;
+    border: 1px solid rgba(74, 222, 128, 0.16);
+}
+
+.adomi-login__panel {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(28px, 5vw, 72px);
+    background: #ffffff;
+}
+
+.adomi-login__form-wrap {
+    width: min(100%, 430px);
+}
+
+.adomi-login__mobile-brand {
+    display: none;
+    margin-bottom: 42px;
+}
+
+.adomi-login__heading {
+    margin-bottom: 30px;
+}
+
+.adomi-login__eyebrow--dark {
+    margin-bottom: 12px;
+    border-color: #dcfce7;
+    background: #f0fdf4;
+    color: var(--login-accent-dark);
+}
+
+.adomi-login__heading h2 {
+    margin: 0;
+    color: var(--login-text);
+    font-size: clamp(2rem, 3vw, 2.55rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+}
+
+.adomi-login__heading p {
+    margin: 10px 0 0;
+    color: var(--login-muted);
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+
+.adomi-login__alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 12px 14px;
+    border: 1px solid #fecaca;
+    border-radius: 11px;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+.adomi-login__alert i {
+    margin-top: 1px;
+    flex: 0 0 auto;
+}
+
+.adomi-login__form {
+    display: grid;
+    gap: 19px;
+}
+
+.adomi-login__field {
+    display: grid;
+    gap: 8px;
+}
+
+.adomi-login__field label {
+    color: #374151;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.adomi-login__input {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 0 14px;
+    border: 1px solid var(--login-border);
+    border-radius: 11px;
+    background: #ffffff;
+    transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        background-color 160ms ease;
+}
+
+.adomi-login__input:focus-within {
+    border-color: #86efac;
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+}
+
+.adomi-login__input > i {
+    flex: 0 0 auto;
+    color: #9ca3af;
+    font-size: 1rem;
+}
+
+.adomi-login__input input {
+    min-width: 0;
+    width: 100%;
+    height: 46px;
+    padding: 0;
+    border: 0 !important;
+    outline: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--login-text);
+    font: inherit;
+    font-size: 0.94rem;
+}
+
+.adomi-login__input input::placeholder {
+    color: #9ca3af;
+}
+
+.adomi-login__password-toggle {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+.adomi-login__password-toggle:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.adomi-login__submit {
+    min-height: 49px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    margin-top: 3px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 11px;
+    background: var(--login-primary);
+    color: #ffffff;
+    font-size: 0.92rem;
+    font-weight: 750;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(17, 24, 39, 0.12);
+    transition:
+        transform 160ms ease,
+        background-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.adomi-login__submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background: #0b1220;
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.16);
+}
+
+.adomi-login__submit:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.adomi-login__submit:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.adomi-login__register {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 24px;
+    color: var(--login-muted);
+    font-size: 0.86rem;
+}
+
+.adomi-login__register button {
+    padding: 4px 5px;
+    border: 0;
+    background: transparent;
+    color: var(--login-accent-dark);
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.adomi-login__register button:hover {
+    text-decoration: underline;
+}
+
+.adomi-login__security {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 34px;
+    padding-top: 20px;
+    border-top: 1px solid #f1f5f9;
+    color: #9ca3af;
+    font-size: 0.76rem;
+}
+
+.adomi-login__security i {
+    color: #22c55e;
+}
+
+@media (max-width: 900px) {
+    .adomi-login {
+        display: block;
+        background: #ffffff;
+        overflow: visible;
+    }
+
+    .adomi-login__hero {
+        display: none;
+    }
+
+    .adomi-login__panel {
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding:
+            max(28px, env(safe-area-inset-top))
+            max(22px, env(safe-area-inset-right))
+            max(28px, env(safe-area-inset-bottom))
+            max(22px, env(safe-area-inset-left));
+    }
+
+    .adomi-login__form-wrap {
+        width: min(100%, 460px);
+    }
+
+    .adomi-login__mobile-brand {
+        display: inline-flex;
+    }
+}
+
+@media (max-width: 480px) {
+    .adomi-login__panel {
+        align-items: flex-start;
+        padding-top: max(32px, env(safe-area-inset-top));
+    }
+
+    .adomi-login__mobile-brand {
+        margin-bottom: clamp(42px, 12vh, 82px);
+        font-size: 1.16rem;
+    }
+
+    .adomi-login__brand-icon {
+        width: 37px;
+        height: 37px;
+        border-radius: 11px;
+    }
+
+    .adomi-login__heading {
+        margin-bottom: 26px;
+    }
+
+    .adomi-login__heading h2 {
+        font-size: 2rem;
+    }
+
+    .adomi-login__input,
+    .adomi-login__submit {
+        min-height: 50px;
+    }
+
+    .adomi-login__input input {
+        height: 48px;
+        font-size: 16px;
+    }
+
+    .adomi-login__register {
+        margin-top: 22px;
+    }
+
+    .adomi-login__security {
+        margin-top: 28px;
+    }
+}
+
+@media (max-width: 360px) {
+    .adomi-login__panel {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .adomi-login__mobile-brand {
+        margin-bottom: 44px;
+    }
+
+    .adomi-login__heading h2 {
+        font-size: 1.8rem;
+    }
+
+    .adomi-login__register {
+        display: grid;
+        justify-items: center;
+    }
+}
+
+@media (min-width: 1600px) {
+    .adomi-login {
+        grid-template-columns: minmax(0, 1.15fr) minmax(520px, 0.85fr);
+    }
+
+    .adomi-login__form-wrap {
+        width: min(100%, 450px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .adomi-login *,
+    .adomi-login *::before,
+    .adomi-login *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+    }
+}

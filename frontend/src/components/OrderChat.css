@@ -1,0 +1,196 @@
+/* ADOMI · Chat de pedido */
+.adomi-chat{
+    --chat-accent:#2563eb;
+    --chat-accent-dark:#1d4ed8;
+    --chat-border:#e5e7eb;
+    --chat-muted:#6b7280;
+    color:#111827;
+}
+.adomi-chat__alert{
+    margin-bottom:12px;
+    border:1px solid #fecaca;
+    border-radius:10px!important;
+    background:#fef2f2;
+    font-size:.82rem;
+}
+.adomi-chat__messages{
+    height:clamp(240px,34vh,340px);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    padding:14px;
+    margin-bottom:14px;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    background:#f8fafc;
+    scrollbar-width:thin;
+    scrollbar-color:#cbd5e1 transparent;
+}
+.adomi-chat__messages::-webkit-scrollbar{width:6px}
+.adomi-chat__messages::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px}
+.adomi-chat__empty{
+    height:100%;
+    min-height:170px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0;
+    color:#94a3b8;
+    font-size:.86rem;
+    text-align:center;
+}
+.adomi-chat__row{
+    display:flex;
+    margin-bottom:9px;
+}
+.adomi-chat__row:last-child{margin-bottom:0}
+.adomi-chat__row--mine{justify-content:flex-end}
+.adomi-chat__row--other{justify-content:flex-start}
+.adomi-chat__bubble{
+    width:fit-content;
+    max-width:min(82%,560px);
+    padding:9px 11px 7px;
+    border-radius:14px;
+    box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+.adomi-chat__bubble--mine{
+    border-bottom-right-radius:5px;
+    background:var(--chat-accent);
+    color:#fff;
+}
+.adomi-chat__bubble--other{
+    border:1px solid #e5e7eb;
+    border-bottom-left-radius:5px;
+    background:#fff;
+    color:#111827;
+}
+.adomi-chat__meta{
+    display:block;
+    margin-bottom:3px;
+    color:#64748b;
+    font-size:.66rem;
+    font-weight:650;
+    line-height:1.25;
+}
+.adomi-chat__bubble--mine .adomi-chat__meta{color:rgba(255,255,255,.72)}
+.adomi-chat__text{
+    margin:0 0 3px;
+    font-size:.88rem;
+    line-height:1.42;
+    overflow-wrap:anywhere;
+    white-space:pre-wrap;
+}
+.adomi-chat__bubble .adomi-chat__text + .adomi-chat__meta{
+    margin:0;
+    text-align:right;
+    font-size:.61rem;
+    font-weight:500;
+}
+.adomi-chat__quick{margin-bottom:12px}
+.adomi-chat__quick-title{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    margin-bottom:7px;
+    color:#475569;
+}
+.adomi-chat__quick-title i{margin:0!important;font-size:.82rem}
+.adomi-chat__quick-title small{font-size:.74rem}
+.adomi-chat__quick-list{
+    display:flex;
+    gap:7px;
+    overflow-x:auto;
+    padding:1px 1px 5px;
+    scrollbar-width:none;
+    scroll-snap-type:x proximity;
+}
+.adomi-chat__quick-list::-webkit-scrollbar{display:none}
+.adomi-chat__quick-button{
+    flex:0 0 auto;
+    max-width:260px;
+    padding:6px 10px;
+    border:1px solid #dbe1e8;
+    border-radius:999px;
+    background:#fff;
+    color:#475569;
+    font-size:.72rem;
+    font-weight:600;
+    line-height:1.25;
+    white-space:nowrap;
+    cursor:pointer;
+    scroll-snap-align:start;
+    transition:border-color .15s ease,background .15s ease,color .15s ease;
+}
+.adomi-chat__quick-button:hover{
+    border-color:#93c5fd;
+    background:#eff6ff;
+    color:#1d4ed8;
+}
+.adomi-chat__form{margin:0}
+.adomi-chat__composer{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 44px;
+    align-items:center;
+    gap:8px;
+    padding:5px;
+    border:1px solid #dfe3e8;
+    border-radius:13px;
+    background:#fff;
+    transition:border-color .15s ease,box-shadow .15s ease;
+}
+.adomi-chat__composer:focus-within{
+    border-color:#93c5fd;
+    box-shadow:0 0 0 3px rgba(37,99,235,.08);
+}
+.adomi-chat__input{
+    min-width:0;
+    width:100%;
+    height:38px;
+    padding:0 9px;
+    border:0;
+    outline:0;
+    background:transparent;
+    color:#111827;
+    font:inherit;
+    font-size:.88rem;
+}
+.adomi-chat__input::placeholder{color:#9ca3af}
+.adomi-chat__send{
+    width:40px;
+    height:40px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    border:0;
+    border-radius:10px;
+    background:var(--chat-accent);
+    color:#fff;
+    cursor:pointer;
+    transition:background .15s ease,transform .15s ease,opacity .15s ease;
+}
+.adomi-chat__send:hover:not(:disabled){background:var(--chat-accent-dark);transform:translateY(-1px)}
+.adomi-chat__send:disabled{opacity:.45;cursor:not-allowed}
+.adomi-chat__send .bi-send{margin:0!important}
+.adomi-chat__send .spinner-border{margin:0!important}
+.adomi-chat__send span:not(.spinner-border){display:none!important}
+
+@media(max-width:575.98px){
+    .adomi-chat__messages{
+        height:clamp(230px,38vh,310px);
+        padding:10px;
+        border-radius:12px;
+    }
+    .adomi-chat__bubble{max-width:88%;padding:8px 10px 6px}
+    .adomi-chat__text{font-size:.84rem}
+    .adomi-chat__quick-button{max-width:230px;font-size:.7rem}
+    .adomi-chat__input{height:40px;font-size:16px}
+    .adomi-chat__composer{grid-template-columns:minmax(0,1fr) 42px}
+    .adomi-chat__send{width:38px;height:38px}
+}
+@media(max-width:360px){
+    .adomi-chat__messages{height:240px}
+    .adomi-chat__bubble{max-width:91%}
+}
+@media(prefers-reduced-motion:reduce){
+    .adomi-chat *{transition:none!important;scroll-behavior:auto!important}
+}

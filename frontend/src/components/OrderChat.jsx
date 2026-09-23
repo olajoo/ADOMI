@@ -3,6 +3,7 @@ import {
     getMessagesByOrder,
     sendMessage
 } from "../services/messageService";
+import "./OrderChat.css";
 
 function OrderChat({ pedidoId }) {
 
@@ -202,13 +203,13 @@ function OrderChat({ pedidoId }) {
 
     return (
 
-        <div>
+        <div className="adomi-chat">
 
             {/* ERROR */}
 
             {error && (
 
-                <div className="alert alert-danger py-2">
+                <div className="alert alert-danger py-2 adomi-chat__alert">
 
                     <i className="bi bi-exclamation-triangle me-2"></i>
 
@@ -222,16 +223,12 @@ function OrderChat({ pedidoId }) {
             {/* MENSAJES */}
 
             <div
-                className="border rounded-4 p-3 bg-light mb-3"
-                style={{
-                    maxHeight: "260px",
-                    overflowY: "auto"
-                }}
+                className="adomi-chat__messages"
             >
 
                 {mensajes.length === 0 ? (
 
-                    <p className="text-muted text-center mb-0">
+                    <p className="adomi-chat__empty">
 
                         No hay mensajes todavía.
 
@@ -249,30 +246,23 @@ function OrderChat({ pedidoId }) {
 
                             <div
                                 key={item.id}
-                                className={`mb-3 d-flex ${
+                                className={`adomi-chat__row ${
                                     esMio
-                                        ? "justify-content-end"
-                                        : "justify-content-start"
+                                        ? "adomi-chat__row--mine"
+                                        : "adomi-chat__row--other"
                                 }`}
                             >
 
                                 <div
-                                    className={`p-2 rounded-3 ${
+                                    className={`adomi-chat__bubble ${
                                         esMio
-                                            ? "bg-primary text-white"
-                                            : "bg-white border"
+                                            ? "adomi-chat__bubble--mine"
+                                            : "adomi-chat__bubble--other"
                                     }`}
-                                    style={{
-                                        maxWidth: "85%"
-                                    }}
                                 >
 
                                     <small
-                                        className={
-                                            esMio
-                                                ? "text-white-50"
-                                                : "text-muted"
-                                        }
+                                        className="adomi-chat__meta"
                                     >
 
                                         {item.usuario_nombre}
@@ -283,11 +273,7 @@ function OrderChat({ pedidoId }) {
 
 
                                     <p
-                                        className="mb-1"
-                                        style={{
-                                            overflowWrap:
-                                                "anywhere"
-                                        }}
+                                        className="adomi-chat__text"
                                     >
 
                                         {item.mensaje}
@@ -296,11 +282,7 @@ function OrderChat({ pedidoId }) {
 
 
                                     <small
-                                        className={
-                                            esMio
-                                                ? "text-white-50"
-                                                : "text-muted"
-                                        }
+                                        className="adomi-chat__meta"
                                     >
 
                                         {new Date(
@@ -323,9 +305,9 @@ function OrderChat({ pedidoId }) {
 
             {/* RESPUESTAS RÁPIDAS */}
 
-            <div className="mb-3">
+            <div className="adomi-chat__quick">
 
-                <div className="d-flex align-items-center mb-2">
+                <div className="adomi-chat__quick-title">
 
                     <i className="bi bi-lightning-charge-fill text-warning me-2"></i>
 
@@ -338,7 +320,7 @@ function OrderChat({ pedidoId }) {
                 </div>
 
 
-                <div className="d-flex flex-wrap gap-2">
+                <div className="adomi-chat__quick-list">
 
                     {mensajesRapidos.map(
                         (opcion, index) => (
@@ -346,7 +328,7 @@ function OrderChat({ pedidoId }) {
                             <button
                                 key={index}
                                 type="button"
-                                className="btn btn-outline-secondary btn-sm rounded-pill"
+                                className="adomi-chat__quick-button"
                                 onClick={() =>
                                     seleccionarMensajeRapido(
                                         opcion.texto
@@ -372,13 +354,13 @@ function OrderChat({ pedidoId }) {
 
             {/* ESCRIBIR MENSAJE */}
 
-            <form onSubmit={enviarMensaje}>
+            <form className="adomi-chat__form" onSubmit={enviarMensaje}>
 
-                <div className="input-group">
+                <div className="adomi-chat__composer">
 
                     <input
                         type="text"
-                        className="form-control"
+                        className="adomi-chat__input"
                         placeholder="Escribe un mensaje..."
                         value={mensaje}
                         maxLength="500"
@@ -392,7 +374,8 @@ function OrderChat({ pedidoId }) {
 
                     <button
                         type="submit"
-                        className="btn btn-primary"
+                        className="adomi-chat__send"
+                        aria-label="Enviar mensaje"
                         disabled={
                             enviando ||
                             !mensaje.trim()

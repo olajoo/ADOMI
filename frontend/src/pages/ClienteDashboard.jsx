@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
     createOrder,
@@ -12,9 +12,11 @@ import { getDeliveryLocation } from "../services/locationService";
 import DeliveryMap from "../components/DeliveryMap";
 import OrderChat from "../components/OrderChat";
 import socket from "../socket";
+import "./ClienteDashboard.css";
 
 function ClienteDashboard() {
     const user = JSON.parse(localStorage.getItem("user"));
+    const joinedOrderRoomsRef = useRef(new Set());
 
     const [vista, setVista] = useState("crear");
 
@@ -47,6 +49,7 @@ function ClienteDashboard() {
     const [error, setError] = useState("");
     const [notificacion, setNotificacion] = useState("");
     const [cargando, setCargando] = useState(false);
+    const [panelPedido, setPanelPedido] = useState(null);
 
     const pedidosActivos = pedidos.filter(
         (pedido) =>
@@ -150,9 +153,26 @@ function ClienteDashboard() {
     }, []);
 
     useEffect(() => {
-        pedidos.forEach((pedido) => {
-            socket.emit("joinOrderRoom", pedido.id);
-        });
+        const joinRooms = () => {
+            pedidos.forEach((pedido) => {
+                if (!joinedOrderRoomsRef.current.has(pedido.id)) {
+                    socket.emit("joinOrderRoom", pedido.id);
+                    joinedOrderRoomsRef.current.add(pedido.id);
+                }
+            });
+        };
+
+        const handleReconnect = () => {
+            joinedOrderRoomsRef.current.clear();
+            joinRooms();
+        };
+
+        joinRooms();
+        socket.on("connect", handleReconnect);
+
+        return () => {
+            socket.off("connect", handleReconnect);
+        };
     }, [pedidos]);
 
     useEffect(() => {
@@ -545,9 +565,9 @@ function ClienteDashboard() {
     };
 
     return (
-        <div className="min-vh-100 bg-light">
+        <div className="min-vh-100 bg-light adomi-client">
 
-            <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+            <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm adomi-client__navbar">
                 <div className="container-fluid px-4">
 
                     <span className="navbar-brand fw-bold">
@@ -572,7 +592,7 @@ function ClienteDashboard() {
                 </div>
             </nav>
 
-            <main className="container-fluid px-4 py-4">
+            <main className="container-fluid px-4 py-4 adomi-client__main">
 
                 {notificacion && (
                     <div className="alert alert-info shadow-sm">
@@ -613,9 +633,9 @@ function ClienteDashboard() {
                     <div className="col-12 col-md-4">
 
                         <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
+                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-client__nav-card ${
                                 vista === "crear"
-                                    ? "border border-primary"
+                                    ? "adomi-client__nav-card--active"
                                     : ""
                             }`}
                             onClick={() =>
@@ -644,9 +664,9 @@ function ClienteDashboard() {
                     <div className="col-12 col-md-4">
 
                         <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
+                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-client__nav-card ${
                                 vista === "activo"
-                                    ? "border border-warning"
+                                    ? "adomi-client__nav-card--active"
                                     : ""
                             }`}
                             onClick={() =>
@@ -675,9 +695,9 @@ function ClienteDashboard() {
                     <div className="col-12 col-md-4">
 
                         <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
+                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-client__nav-card ${
                                 vista === "historial"
-                                    ? "border border-success"
+                                    ? "adomi-client__nav-card--active"
                                     : ""
                             }`}
                             onClick={() =>
@@ -728,23 +748,27 @@ function ClienteDashboard() {
                                                 Tipo de servicio
                                             </label>
 
-                                            <select
-                                                className="form-select"
-                                                value={tipoServicio}
-                                                onChange={(e) =>
-                                                    setTipoServicio(
-                                                        e.target.value
-                                                    )
-                                                }
-                                            >
-                                                <option value="restaurante">
-                                                    Restaurante
-                                                </option>
+                                            <div className="adomi-service-selector">
+                                                <button
+                                                    type="button"
+                                                    className={`adomi-service-option ${tipoServicio === "restaurante" ? "adomi-service-option--active" : ""}`}
+                                                    onClick={() => setTipoServicio("restaurante")}
+                                                >
+                                                    <span className="adomi-service-option__icon"><i className="bi bi-shop-window"></i></span>
+                                                    <span><strong>Restaurante</strong><small>Comida preparada</small></span>
+                                                    <i className="bi bi-check-circle-fill adomi-service-option__check"></i>
+                                                </button>
 
-                                                <option value="supermercado">
-                                                    Supermercado
-                                                </option>
-                                            </select>
+                                                <button
+                                                    type="button"
+                                                    className={`adomi-service-option ${tipoServicio === "supermercado" ? "adomi-service-option--active" : ""}`}
+                                                    onClick={() => setTipoServicio("supermercado")}
+                                                >
+                                                    <span className="adomi-service-option__icon"><i className="bi bi-basket2"></i></span>
+                                                    <span><strong>Abarrotes</strong><small>Supermercado / tienda</small></span>
+                                                    <i className="bi bi-check-circle-fill adomi-service-option__check"></i>
+                                                </button>
+                                            </div>
 
                                         </div>
 
@@ -1277,71 +1301,17 @@ function ClienteDashboard() {
 
                                     )}
 
-                                    <div className="card border-0 shadow-sm rounded-4 mb-4">
-
-                                        <div className="card-body p-4">
-
-                                            <h4 className="fw-bold mb-3">
-                                                <i className="bi bi-geo-alt me-2 text-success"></i>
-                                                Ubicación del repartidor
-                                            </h4>
-
-                                            {!pedidoActivoSeleccionado.repartidor_id ? (
-
-                                                <p className="text-muted mb-0">
-                                                    Aún no hay repartidor asignado.
-                                                </p>
-
-                                            ) : !ubicacionRepartidor ? (
-
-                                                <p className="text-muted mb-0">
-                                                    Ubicación no disponible.
-                                                </p>
-
-                                            ) : (
-
-                                                <DeliveryMap
-                                                    latitud={
-                                                        ubicacionRepartidor.latitud
-                                                    }
-                                                    longitud={
-                                                        ubicacionRepartidor.longitud
-                                                    }
-                                                />
-
-                                            )}
-
+                                    <div className="card border-0 shadow-sm rounded-4 adomi-client__tools-card">
+                                        <div className="card-body p-3 p-md-4">
+                                            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                                <div><h5 className="fw-bold mb-1">Seguimiento del pedido</h5><p className="text-muted small mb-0">Consulta la ubicación o conversa con el repartidor cuando lo necesites.</p></div>
+                                                <div className="adomi-client__tools-actions">
+                                                    <button type="button" className="btn btn-outline-success" disabled={!pedidoActivoSeleccionado.repartidor_id || !ubicacionRepartidor} onClick={() => setPanelPedido("mapa")}><i className="bi bi-map me-2"></i>Ver seguimiento</button>
+                                                    <button type="button" className="btn btn-dark" disabled={!pedidoActivoSeleccionado.repartidor_id} onClick={() => setPanelPedido("chat")}><i className="bi bi-chat-dots me-2"></i>Abrir chat</button>
+                                                </div>
+                                            </div>
+                                            {!pedidoActivoSeleccionado.repartidor_id && <small className="text-muted d-block mt-3">Disponible cuando un repartidor acepte el pedido.</small>}
                                         </div>
-
-                                    </div>
-
-                                    <div className="card border-0 shadow-sm rounded-4">
-
-                                        <div className="card-body p-4">
-
-                                            <h4 className="fw-bold mb-3">
-                                                <i className="bi bi-chat-dots me-2 text-dark"></i>
-                                                Chat con repartidor
-                                            </h4>
-
-                                            {!pedidoActivoSeleccionado.repartidor_id ? (
-
-                                                <p className="text-muted mb-0">
-                                                    El chat estará disponible cuando un repartidor acepte el pedido.
-                                                </p>
-
-                                            ) : (
-
-                                                <OrderChat
-                                                    pedidoId={
-                                                        pedidoActivoSeleccionado.id
-                                                    }
-                                                />
-
-                                            )}
-
-                                        </div>
-
                                     </div>
 
                                 </>
@@ -1689,6 +1659,22 @@ function ClienteDashboard() {
 
                         </div>
 
+                    </div>
+                )}
+
+
+                {panelPedido && pedidoActivoSeleccionado && (
+                    <div className="adomi-client__overlay" onMouseDown={() => setPanelPedido(null)}>
+                        <div className="adomi-client__modal" onMouseDown={(e) => e.stopPropagation()}>
+                            <div className="adomi-client__modal-header">
+                                <div><small className="text-muted">Pedido #{pedidoActivoSeleccionado.id}</small><h5 className="fw-bold mb-0">{panelPedido === "mapa" ? "Seguimiento del repartidor" : "Chat con repartidor"}</h5></div>
+                                <button type="button" className="btn-close" aria-label="Cerrar" onClick={() => setPanelPedido(null)}></button>
+                            </div>
+                            <div className="adomi-client__modal-body">
+                                {panelPedido === "mapa" && ubicacionRepartidor && <DeliveryMap latitud={ubicacionRepartidor.latitud} longitud={ubicacionRepartidor.longitud} titulo="Ubicación del repartidor" altura="min(58vh, 520px)" />}
+                                {panelPedido === "chat" && pedidoActivoSeleccionado.repartidor_id && <OrderChat pedidoId={pedidoActivoSeleccionado.id} />}
+                            </div>
+                        </div>
                     </div>
                 )}
 
