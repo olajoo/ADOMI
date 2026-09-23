@@ -17,7 +17,10 @@ import {
     getAllUsers,
     updateUserStatus,
     createDeliveryUser,
-    getAllOrdersAdmin
+    createAdminUser,
+    getAllOrdersAdmin,
+    resolveOrderIncident,
+    correctCancelledOrder
 } from "../services/adminService";
 
 import { reactivateCancelledOrder } from "../services/orderService";
@@ -39,7 +42,26 @@ function AdminDashboard() {
     const [correoRepartidor, setCorreoRepartidor] = useState("");
     const [passwordRepartidor, setPasswordRepartidor] = useState("");
 
+    const [nombreAdmin, setNombreAdmin] = useState("");
+    const [correoAdmin, setCorreoAdmin] = useState("");
+    const [passwordAdmin, setPasswordAdmin] = useState("");
+    const [creandoAdmin, setCreandoAdmin] = useState(false);
+
     const [repartidorSeleccionado, setRepartidorSeleccionado] = useState({});
+
+    const [pedidoDetalle, setPedidoDetalle] = useState(null);
+    const [resolucionIncidencia, setResolucionIncidencia] = useState("");
+    const [resolviendoIncidencia, setResolviendoIncidencia] = useState(false);
+
+    const [editandoPedido, setEditandoPedido] = useState(false);
+    const [guardandoCorreccion, setGuardandoCorreccion] = useState(false);
+    const [datosCorreccion, setDatosCorreccion] = useState({
+        lugar_compra: "",
+        descripcion: "",
+        direccion: "",
+        telefono_contacto: "",
+        total: ""
+    });
 
     const clientes = usuarios.filter((u) => u.rol === "cliente");
     const repartidores = usuarios.filter((u) => u.rol === "repartidor");
@@ -51,6 +73,16 @@ function AdminDashboard() {
     );
     const pedidosFinalizados = pedidos.filter(
         (p) => p.estado === "entregado" || p.estado === "cancelado"
+    );
+
+    const pedidosCancelados = pedidos.filter(
+        (p) => p.estado === "cancelado"
+    );
+
+    const incidenciasPendientes = pedidos.filter(
+        (p) =>
+            p.confirmacion_cliente === "problema" &&
+            Number(p.incidencia_resuelta) !== 1
     );
 
     const pedidosChartData = stats ? [
@@ -171,6 +203,56 @@ function AdminDashboard() {
         }
     };
 
+    const handleCrearAdmin = async (e) => {
+        e.preventDefault();
+
+        setMensaje("");
+        setError("");
+
+        const nombre = nombreAdmin.trim();
+        const correo = correoAdmin.trim().toLowerCase();
+
+        if (nombre.length < 2 || nombre.length > 100) {
+            setError("El nombre debe tener entre 2 y 100 caracteres");
+            return;
+        }
+
+        if (!correo) {
+            setError("El correo es obligatorio");
+            return;
+        }
+
+        if (passwordAdmin.length < 8 || passwordAdmin.length > 72) {
+            setError("La contraseña debe tener entre 8 y 72 caracteres");
+            return;
+        }
+
+        try {
+            setCreandoAdmin(true);
+
+            await createAdminUser(
+                nombre,
+                correo,
+                passwordAdmin
+            );
+
+            setMensaje("Administrador creado correctamente");
+            setNombreAdmin("");
+            setCorreoAdmin("");
+            setPasswordAdmin("");
+
+            await cargarDashboard();
+            setVista("administradores");
+        } catch (error) {
+            setError(
+                error.response?.data?.message ||
+                "Error al crear administrador"
+            );
+        } finally {
+            setCreandoAdmin(false);
+        }
+    };
+
     const handleReactivarPedido = async (pedido) => {
         setMensaje("");
         setError("");
@@ -199,6 +281,176 @@ function AdminDashboard() {
                 "Error al reactivar pedido"
             );
         }
+    };
+
+    const cargarDatosCorreccion = (pedido) => {
+        setDatosCorreccion({
+            lugar_compra: pedido?.lugar_compra || "",
+            descripcion: pedido?.descripcion || "",
+            direccion: pedido?.direccion || "",
+            telefono_contacto: pedido?.telefono_contacto || "",
+            total: pedido?.total ?? ""
+        });
+    };
+
+    const abrirDetallePedido = (pedido) => {
+        setPedidoDetalle(pedido);
+        setResolucionIncidencia(pedido.resolucion_admin || "");
+        setEditandoPedido(false);
+        cargarDatosCorreccion(pedido);
+        setError("");
+    };
+
+    const cerrarDetallePedido = () => {
+        if (resolviendoIncidencia || guardandoCorreccion) return;
+        setPedidoDetalle(null);
+        setResolucionIncidencia("");
+        setEditandoPedido(false);
+    };
+
+    const iniciarCorreccion = () => {
+        if (!pedidoDetalle || pedidoDetalle.estado !== "cancelado") return;
+        cargarDatosCorreccion(pedidoDetalle);
+        setEditandoPedido(true);
+        setError("");
+        setMensaje("");
+    };
+
+    const cancelarCorreccion = () => {
+        cargarDatosCorreccion(pedidoDetalle);
+        setEditandoPedido(false);
+        setError("");
+    };
+
+    const handleCambioCorreccion = (campo, valor) => {
+        setDatosCorreccion((prev) => ({ ...prev, [campo]: valor }));
+    };
+
+    const handleTelefonoCorreccion = (valor) => {
+        const digitos = valor.replace(/\D/g, "").slice(0, 8);
+        const formateado = digitos.length > 4
+            ? `${digitos.slice(0, 4)}-${digitos.slice(4)}`
+            : digitos;
+
+        handleCambioCorreccion("telefono_contacto", formateado);
+    };
+
+    const handleGuardarCorreccion = async () => {
+        if (!pedidoDetalle || pedidoDetalle.estado !== "cancelado") return;
+
+        const lugarCompra = datosCorreccion.lugar_compra.trim();
+        const descripcion = datosCorreccion.descripcion.trim();
+        const direccion = datosCorreccion.direccion.trim();
+        const telefonoDigitos = datosCorreccion.telefono_contacto.replace(/\D/g, "");
+        const totalNumero = Number(datosCorreccion.total);
+
+        if (lugarCompra.length < 2 || lugarCompra.length > 150) {
+            setError("El lugar de compra debe tener entre 2 y 150 caracteres");
+            return;
+        }
+
+        if (!descripcion || !direccion) {
+            setError("Descripción y dirección son obligatorias");
+            return;
+        }
+
+        if (telefonoDigitos.length !== 8) {
+            setError("El teléfono debe contener exactamente 8 dígitos");
+            return;
+        }
+
+        if (!Number.isFinite(totalNumero) || totalNumero <= 0) {
+            setError("El total estimado debe ser mayor a Q 0.00");
+            return;
+        }
+
+        const telefonoFormateado =
+            `${telefonoDigitos.slice(0, 4)}-${telefonoDigitos.slice(4)}`;
+
+        try {
+            setGuardandoCorreccion(true);
+            setError("");
+            setMensaje("");
+
+            await correctCancelledOrder(pedidoDetalle.id, {
+                lugar_compra: lugarCompra,
+                descripcion,
+                direccion,
+                telefono_contacto: telefonoFormateado,
+                total: totalNumero
+            });
+
+            const actualizado = {
+                ...pedidoDetalle,
+                lugar_compra: lugarCompra,
+                descripcion,
+                direccion,
+                telefono_contacto: telefonoFormateado,
+                total: totalNumero
+            };
+
+            setPedidoDetalle(actualizado);
+            setEditandoPedido(false);
+            setMensaje(`Pedido #${pedidoDetalle.id} corregido correctamente`);
+            await cargarDashboard();
+        } catch (error) {
+            setError(
+                error.response?.data?.message ||
+                "Error al corregir el pedido"
+            );
+        } finally {
+            setGuardandoCorreccion(false);
+        }
+    };
+
+    const handleResolverIncidencia = async () => {
+        if (!pedidoDetalle) return;
+
+        const resolucion = resolucionIncidencia.trim();
+
+        if (resolucion.length < 5) {
+            setError("La resolución debe contener al menos 5 caracteres");
+            return;
+        }
+
+        if (resolucion.length > 500) {
+            setError("La resolución no puede superar los 500 caracteres");
+            return;
+        }
+
+        try {
+            setResolviendoIncidencia(true);
+            setError("");
+
+            await resolveOrderIncident(pedidoDetalle.id, resolucion);
+            await cargarDashboard();
+
+            setPedidoDetalle((prev) => ({
+                ...prev,
+                incidencia_resuelta: 1,
+                resolucion_admin: resolucion,
+                fecha_resolucion: new Date().toISOString()
+            }));
+
+            setMensaje(`Incidencia del pedido #${pedidoDetalle.id} resuelta correctamente`);
+        } catch (error) {
+            setError(
+                error.response?.data?.message ||
+                "Error al resolver la incidencia"
+            );
+        } finally {
+            setResolviendoIncidencia(false);
+        }
+    };
+
+    const formatearFecha = (fecha) => {
+        if (!fecha) return "Pendiente";
+        return new Date(fecha).toLocaleString();
+    };
+
+    const formatearDinero = (valor) => {
+        if (valor === null || valor === undefined || valor === "") return "Pendiente";
+        return `Q ${Number(valor).toFixed(2)}`;
     };
 
     const getEstadoBadge = (estado) => {
@@ -318,126 +570,145 @@ function AdminDashboard() {
     );
 
     const TablaPedidos = ({ data }) => (
-        <div className="table-responsive">
-            <table className="table align-middle">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Cliente</th>
-                        <th>Repartidor</th>
-                        <th>Servicio</th>
-                        <th>Estado</th>
-                        <th>Estimado</th>
-                        <th>Real</th>
-                        <th>Diferencia</th>
-                        <th>Entrega</th>
-                        <th>Confirmación cliente</th>
-                        <th>Comentario cliente</th>
-                        <th>Admin</th>
-                    </tr>
-                </thead>
+        <div>
+            {/* Vista de escritorio */}
+            <div className="table-responsive d-none d-md-block">
+                <table className="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Repartidor</th>
+                            <th>Recoger en</th>
+                            <th>Estado</th>
+                            <th style={{ width: "190px" }}>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {data.map((pedido) => {
+                            const tieneProblema = pedido.confirmacion_cliente === "problema";
+                            const incidenciaResuelta = Number(pedido.incidencia_resuelta) === 1;
 
-                <tbody>
-                    {data.map((pedido) => (
-                        <tr key={pedido.id}>
-                            <td>#{pedido.id}</td>
+                            return (
+                                <tr
+                                    key={pedido.id}
+                                    className={tieneProblema && !incidenciaResuelta ? "table-danger" : ""}
+                                >
+                                    <td>
+                                        <div className="fw-semibold">{pedido.cliente_nombre}</div>
+                                        <small className="text-muted">Pedido #{pedido.id}</small>
+                                    </td>
+                                    <td>{pedido.repartidor_nombre || "Sin asignar"}</td>
+                                    <td>{pedido.lugar_compra || "No registrado"}</td>
+                                    <td>
+                                        <span className={getEstadoBadge(pedido.estado)}>
+                                            {pedido.estado}
+                                        </span>
+                                        {tieneProblema && !incidenciaResuelta && (
+                                            <span className="badge bg-danger ms-2">Problema</span>
+                                        )}
+                                        {tieneProblema && incidenciaResuelta && (
+                                            <span className="badge bg-success ms-2">Resuelto</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <button
+                                            className={`btn btn-sm w-100 ${
+                                                pedido.estado === "cancelado"
+                                                    ? "btn-outline-danger"
+                                                    : tieneProblema && !incidenciaResuelta
+                                                        ? "btn-danger"
+                                                        : "btn-outline-dark"
+                                            }`}
+                                            onClick={() => abrirDetallePedido(pedido)}
+                                        >
+                                            <i className="bi bi-eye me-1"></i>
+                                            {pedido.estado === "cancelado"
+                                                ? "Ver / Reactivar"
+                                                : tieneProblema && !incidenciaResuelta
+                                                    ? "Ver / Resolver"
+                                                    : "Ver detalle"}
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
 
-                            <td>{pedido.cliente_nombre}</td>
+            {/* Vista móvil */}
+            <div className="d-md-none">
+                {data.map((pedido) => {
+                    const tieneProblema = pedido.confirmacion_cliente === "problema";
+                    const incidenciaResuelta = Number(pedido.incidencia_resuelta) === 1;
 
-                            <td>{pedido.repartidor_nombre || "Sin asignar"}</td>
-
-                            <td className="text-capitalize">
-                                {pedido.tipo_servicio}
-                            </td>
-
-                            <td>
+                    return (
+                        <div
+                            key={pedido.id}
+                            className={`border rounded-4 p-3 mb-3 ${
+                                tieneProblema && !incidenciaResuelta
+                                    ? "border-danger bg-danger-subtle"
+                                    : "bg-white"
+                            }`}
+                        >
+                            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                <div>
+                                    <div className="fw-bold">{pedido.cliente_nombre}</div>
+                                    <small className="text-muted">Pedido #{pedido.id}</small>
+                                </div>
                                 <span className={getEstadoBadge(pedido.estado)}>
                                     {pedido.estado}
                                 </span>
-                            </td>
+                            </div>
 
-                            <td>Q {pedido.total}</td>
+                            <div className="small mb-2">
+                                <span className="text-muted">Repartidor: </span>
+                                <span className="fw-semibold">
+                                    {pedido.repartidor_nombre || "Sin asignar"}
+                                </span>
+                            </div>
+                            <div className="small mb-3">
+                                <span className="text-muted">Recoger en: </span>
+                                <span className="fw-semibold">
+                                    {pedido.lugar_compra || "No registrado"}
+                                </span>
+                            </div>
 
-                            <td>
-                                {pedido.total_real
-                                    ? `Q ${pedido.total_real}`
-                                    : "Pendiente"}
-                            </td>
+                            {tieneProblema && !incidenciaResuelta && (
+                                <div className="alert alert-danger py-2 px-3 small mb-3">
+                                    <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                                    Requiere atención del administrador
+                                </div>
+                            )}
 
-                            <td>{mostrarDiferencia(pedido.diferencia)}</td>
+                            {tieneProblema && incidenciaResuelta && (
+                                <div className="text-success small fw-semibold mb-3">
+                                    <i className="bi bi-check-circle-fill me-2"></i>
+                                    Incidencia resuelta
+                                </div>
+                            )}
 
-                            <td style={{ minWidth: "220px" }}>
-                                {pedido.observacion_entrega || "Pendiente"}
-
-                                {pedido.fecha_entrega && (
-                                    <small className="d-block text-muted">
-                                        {new Date(pedido.fecha_entrega).toLocaleString()}
-                                    </small>
-                                )}
-                            </td>
-
-                            <td>
-                                {getConfirmacionClienteBadge(
-                                    pedido.confirmacion_cliente
-                                )}
-
-                                {pedido.fecha_confirmacion_cliente && (
-                                    <small className="d-block text-muted">
-                                        {new Date(
-                                            pedido.fecha_confirmacion_cliente
-                                        ).toLocaleString()}
-                                    </small>
-                                )}
-                            </td>
-
-                            <td style={{ minWidth: "250px" }}>
-                                {pedido.comentario_cliente || "Sin comentario"}
-                            </td>
-
-                            <td style={{ minWidth: "260px" }}>
-                                {pedido.estado === "cancelado" ? (
-                                    <div className="d-flex flex-column gap-2">
-                                        <select
-                                            className="form-select form-select-sm"
-                                            value={repartidorSeleccionado[pedido.id] || ""}
-                                            onChange={(e) =>
-                                                setRepartidorSeleccionado({
-                                                    ...repartidorSeleccionado,
-                                                    [pedido.id]: e.target.value
-                                                })
-                                            }
-                                        >
-                                            <option value="">
-                                                Seleccionar repartidor
-                                            </option>
-
-                                            {repartidores.map((repartidor, index) => (
-                                                <option
-                                                    key={repartidor.id}
-                                                    value={repartidor.id}
-                                                >
-                                                    REP-{index + 1} - {repartidor.nombre}
-                                                </option>
-                                            ))}
-                                        </select>
-
-                                        <button
-                                            className="btn btn-success btn-sm"
-                                            onClick={() => handleReactivarPedido(pedido)}
-                                        >
-                                            Reactivar pedido
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <span className="text-muted">
-                                        Sin acción
-                                    </span>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+                            <button
+                                className={`btn w-100 ${
+                                    pedido.estado === "cancelado"
+                                        ? "btn-outline-danger"
+                                        : tieneProblema && !incidenciaResuelta
+                                            ? "btn-danger"
+                                            : "btn-outline-dark"
+                                }`}
+                                onClick={() => abrirDetallePedido(pedido)}
+                            >
+                                <i className="bi bi-eye me-1"></i>
+                                {pedido.estado === "cancelado"
+                                    ? "Ver detalle / Reactivar"
+                                    : tieneProblema && !incidenciaResuelta
+                                        ? "Ver detalle / Resolver"
+                                        : "Ver detalle"}
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 
@@ -466,7 +737,7 @@ function AdminDashboard() {
                 </div>
             </nav>
 
-            <main className="container-fluid px-4 py-4">
+            <main className="container-fluid px-3 px-md-4 py-3 py-md-4">
 
                 {mensaje && (
                     <div className="alert alert-success">
@@ -481,7 +752,7 @@ function AdminDashboard() {
                 )}
 
                 <div className="card border-0 shadow-sm rounded-4 mb-4">
-                    <div className="card-body p-4">
+                    <div className="card-body p-3 p-md-4">
                         <h2 className="fw-bold mb-1">
                             Panel de Administración
                         </h2>
@@ -494,14 +765,14 @@ function AdminDashboard() {
 
                 <div className="row g-3 mb-4">
 
-                    <div className="col-12 col-md-6 col-xl-3">
+                    <div className="col-12 col-md-6 col-xl">
                         <button
                             className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
                                 vista === "resumen" ? "border border-dark" : ""
                             }`}
                             onClick={() => setVista("resumen")}
                         >
-                            <div className="card-body p-4">
+                            <div className="card-body p-3 p-md-4">
                                 <div className="fs-1 text-dark mb-2">
                                     <i className="bi bi-bar-chart"></i>
                                 </div>
@@ -515,14 +786,14 @@ function AdminDashboard() {
                         </button>
                     </div>
 
-                    <div className="col-12 col-md-6 col-xl-3">
+                    <div className="col-12 col-md-6 col-xl">
                         <button
                             className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
                                 vista === "clientes" ? "border border-primary" : ""
                             }`}
                             onClick={() => setVista("clientes")}
                         >
-                            <div className="card-body p-4">
+                            <div className="card-body p-3 p-md-4">
                                 <div className="fs-1 text-primary mb-2">
                                     <i className="bi bi-people"></i>
                                 </div>
@@ -536,14 +807,14 @@ function AdminDashboard() {
                         </button>
                     </div>
 
-                    <div className="col-12 col-md-6 col-xl-3">
+                    <div className="col-12 col-md-6 col-xl">
                         <button
                             className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
                                 vista === "repartidores" ? "border border-warning" : ""
                             }`}
                             onClick={() => setVista("repartidores")}
                         >
-                            <div className="card-body p-4">
+                            <div className="card-body p-3 p-md-4">
                                 <div className="fs-1 text-warning mb-2">
                                     <i className="bi bi-truck"></i>
                                 </div>
@@ -557,14 +828,35 @@ function AdminDashboard() {
                         </button>
                     </div>
 
-                    <div className="col-12 col-md-6 col-xl-3">
+                    <div className="col-12 col-md-6 col-xl">
+                        <button
+                            className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
+                                vista === "administradores" ? "border border-dark" : ""
+                            }`}
+                            onClick={() => setVista("administradores")}
+                        >
+                            <div className="card-body p-3 p-md-4">
+                                <div className="fs-1 text-dark mb-2">
+                                    <i className="bi bi-shield-lock"></i>
+                                </div>
+
+                                <h5 className="fw-bold">Administradores</h5>
+
+                                <p className="text-muted mb-0">
+                                    {admins.length} registrado(s).
+                                </p>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div className="col-12 col-md-6 col-xl">
                         <button
                             className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
                                 vista === "pedidos" ? "border border-success" : ""
                             }`}
                             onClick={() => setVista("pedidos")}
                         >
-                            <div className="card-body p-4">
+                            <div className="card-body p-3 p-md-4">
                                 <div className="fs-1 text-success mb-2">
                                     <i className="bi bi-bag-check"></i>
                                 </div>
@@ -584,45 +876,76 @@ function AdminDashboard() {
                     <>
                         <div className="row g-3 mb-4">
 
-                            <div className="col-12 col-md-6 col-xl-3">
-                                <div className="card border-0 shadow-sm rounded-4">
-                                    <div className="card-body">
-                                        <p className="text-muted mb-1">Clientes</p>
-                                        <h3 className="fw-bold">{clientes.length}</h3>
+                            <div className="col-6 col-xl-3">
+                                <div className="card border-0 shadow-sm rounded-4 h-100">
+                                    <div className="card-body p-3 p-md-4">
+                                        <div className="d-flex justify-content-between align-items-start gap-2">
+                                            <div>
+                                                <p className="text-muted small mb-1">Pedidos</p>
+                                                <h3 className="fw-bold mb-0">{pedidos.length}</h3>
+                                            </div>
+                                            <i className="bi bi-bag-check fs-4 text-primary"></i>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="col-12 col-md-6 col-xl-3">
-                                <div className="card border-0 shadow-sm rounded-4">
-                                    <div className="card-body">
-                                        <p className="text-muted mb-1">Repartidores</p>
-                                        <h3 className="fw-bold">{repartidores.length}</h3>
+                            <div className="col-6 col-xl-3">
+                                <div className="card border-0 shadow-sm rounded-4 h-100">
+                                    <div className="card-body p-3 p-md-4">
+                                        <div className="d-flex justify-content-between align-items-start gap-2">
+                                            <div>
+                                                <p className="text-muted small mb-1">Activos</p>
+                                                <h3 className="fw-bold mb-0">{pedidosActivos.length}</h3>
+                                            </div>
+                                            <i className="bi bi-truck fs-4 text-success"></i>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="col-12 col-md-6 col-xl-3">
-                                <div className="card border-0 shadow-sm rounded-4">
-                                    <div className="card-body">
-                                        <p className="text-muted mb-1">Pedidos</p>
-                                        <h3 className="fw-bold">{pedidos.length}</h3>
+                            <div className="col-6 col-xl-3">
+                                <button
+                                    type="button"
+                                    className="card border-0 shadow-sm rounded-4 h-100 w-100 text-start"
+                                    onClick={() => setVista("pedidos")}
+                                >
+                                    <div className="card-body p-3 p-md-4">
+                                        <div className="d-flex justify-content-between align-items-start gap-2">
+                                            <div>
+                                                <p className="text-muted small mb-1">Cancelados</p>
+                                                <h3 className="fw-bold text-danger mb-0">{pedidosCancelados.length}</h3>
+                                            </div>
+                                            <i className="bi bi-x-circle fs-4 text-danger"></i>
+                                        </div>
                                     </div>
-                                </div>
+                                </button>
                             </div>
 
-                            <div className="col-12 col-md-6 col-xl-3">
-                                <div className="card border-0 shadow-sm rounded-4">
-                                    <div className="card-body">
-                                        <p className="text-muted mb-1">
-                                            Ingresos entregados
-                                        </p>
-
-                                        <h3 className="fw-bold">
-                                            Q {stats?.ingresos_entregados || "0.00"}
-                                        </h3>
+                            <div className="col-6 col-xl-3">
+                                <button
+                                    type="button"
+                                    className={`card border-0 shadow-sm rounded-4 h-100 w-100 text-start ${
+                                        incidenciasPendientes.length > 0 ? "border border-danger" : ""
+                                    }`}
+                                    onClick={() => setVista("pedidos")}
+                                >
+                                    <div className="card-body p-3 p-md-4">
+                                        <div className="d-flex justify-content-between align-items-start gap-2">
+                                            <div>
+                                                <p className="text-muted small mb-1">Incidencias</p>
+                                                <h3 className={`fw-bold mb-0 ${
+                                                    incidenciasPendientes.length > 0 ? "text-danger" : ""
+                                                }`}>
+                                                    {incidenciasPendientes.length}
+                                                </h3>
+                                            </div>
+                                            <i className={`bi bi-exclamation-triangle fs-4 ${
+                                                incidenciasPendientes.length > 0 ? "text-danger" : "text-secondary"
+                                            }`}></i>
+                                        </div>
                                     </div>
-                                </div>
+                                </button>
                             </div>
 
                         </div>
@@ -783,6 +1106,123 @@ function AdminDashboard() {
                     </div>
                 )}
 
+                {vista === "administradores" && (
+                    <div className="row g-4">
+
+                        <div className="col-12 col-xl-4">
+                            <div className="card border-0 shadow-sm rounded-4">
+                                <div className="card-body p-3 p-md-4">
+                                    <div className="d-flex align-items-center gap-2 mb-1">
+                                        <i className="bi bi-shield-lock fs-4"></i>
+                                        <h4 className="fw-bold mb-0">
+                                            Crear administrador
+                                        </h4>
+                                    </div>
+
+                                    <p className="text-muted small mb-4">
+                                        Solo un administrador autenticado puede crear otra cuenta administrativa.
+                                    </p>
+
+                                    <form onSubmit={handleCrearAdmin}>
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold">
+                                                Nombre
+                                            </label>
+
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={nombreAdmin}
+                                                onChange={(e) => setNombreAdmin(e.target.value)}
+                                                minLength="2"
+                                                maxLength="100"
+                                                autoComplete="name"
+                                                disabled={creandoAdmin}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold">
+                                                Correo
+                                            </label>
+
+                                            <input
+                                                type="email"
+                                                className="form-control"
+                                                value={correoAdmin}
+                                                onChange={(e) => setCorreoAdmin(e.target.value)}
+                                                maxLength="150"
+                                                autoComplete="email"
+                                                disabled={creandoAdmin}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold">
+                                                Contraseña
+                                            </label>
+
+                                            <input
+                                                type="password"
+                                                className="form-control"
+                                                value={passwordAdmin}
+                                                onChange={(e) => setPasswordAdmin(e.target.value)}
+                                                minLength="8"
+                                                maxLength="72"
+                                                autoComplete="new-password"
+                                                disabled={creandoAdmin}
+                                                required
+                                            />
+
+                                            <div className="form-text">
+                                                Entre 8 y 72 caracteres.
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            className="btn btn-dark w-100 fw-semibold"
+                                            disabled={creandoAdmin}
+                                        >
+                                            <i className="bi bi-person-plus me-2"></i>
+                                            {creandoAdmin
+                                                ? "Creando..."
+                                                : "Crear administrador"}
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-12 col-xl-8">
+                            <div className="card border-0 shadow-sm rounded-4">
+                                <div className="card-body p-3 p-md-4">
+                                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+                                        <div>
+                                            <h4 className="fw-bold mb-1">
+                                                Administradores
+                                            </h4>
+                                            <p className="text-muted small mb-0">
+                                                {admins.length} cuenta(s) administrativa(s).
+                                            </p>
+                                        </div>
+
+                                        <span className="badge bg-dark align-self-start align-self-sm-center">
+                                            <i className="bi bi-shield-check me-1"></i>
+                                            Acceso administrativo
+                                        </span>
+                                    </div>
+
+                                    <TablaUsuarios data={admins} />
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                )}
+
                 {vista === "pedidos" && (
                     <>
                         <div className="row g-3 mb-4">
@@ -824,7 +1264,7 @@ function AdminDashboard() {
 
                         <div className="card border-0 shadow-sm rounded-4">
                             <div className="card-body p-4">
-                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
                                     <h4 className="fw-bold mb-0">
                                         Todos los pedidos
                                     </h4>
@@ -844,6 +1284,372 @@ function AdminDashboard() {
                 )}
 
             </main>
+
+            {pedidoDetalle && (
+                <div
+                    className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-end align-items-md-center justify-content-center p-0 p-md-3"
+                    style={{ background: "rgba(0, 0, 0, 0.55)", zIndex: 2000 }}
+                    onClick={cerrarDetallePedido}
+                >
+                    <div
+                        className="card border-0 shadow-lg rounded-top-4 rounded-md-4 w-100"
+                        style={{ maxWidth: "760px", maxHeight: "94vh", overflowY: "auto" }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="card-body p-3 p-md-5">
+                            <div className="d-flex justify-content-between align-items-start gap-3 mb-4">
+                                <div>
+                                    <span className="text-muted">Detalle del pedido</span>
+                                    <h3 className="fw-bold mb-0">Pedido #{pedidoDetalle.id}</h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn-close"
+                                    onClick={cerrarDetallePedido}
+                                    disabled={resolviendoIncidencia || guardandoCorreccion}
+                                ></button>
+                            </div>
+
+                            {pedidoDetalle.estado === "cancelado" && (
+                                <div className="border border-danger rounded-4 p-3 p-md-4 mt-3 mb-3">
+                                    <div className="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                                        <div>
+                                            <h5 className="fw-bold text-danger mb-1">Pedido cancelado</h5>
+                                            <p className="text-muted small mb-0">
+                                                Puedes corregir los datos antes de reactivarlo.
+                                            </p>
+                                        </div>
+
+                                        {!editandoPedido && (
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline-dark btn-sm"
+                                                onClick={iniciarCorreccion}
+                                            >
+                                                <i className="bi bi-pencil-square me-1"></i>
+                                                Corregir pedido
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {editandoPedido && (
+                                        <div className="bg-light rounded-4 p-3 mb-4">
+                                            <h6 className="fw-bold mb-3">Corregir datos</h6>
+
+                                            <div className="mb-3">
+                                                <label className="form-label fw-semibold">Lugar de compra</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    maxLength="150"
+                                                    value={datosCorreccion.lugar_compra}
+                                                    onChange={(e) => handleCambioCorreccion("lugar_compra", e.target.value)}
+                                                    disabled={guardandoCorreccion}
+                                                />
+                                            </div>
+
+                                            <div className="mb-3">
+                                                <label className="form-label fw-semibold">Descripción</label>
+                                                <textarea
+                                                    className="form-control"
+                                                    rows="3"
+                                                    value={datosCorreccion.descripcion}
+                                                    onChange={(e) => handleCambioCorreccion("descripcion", e.target.value)}
+                                                    disabled={guardandoCorreccion}
+                                                ></textarea>
+                                            </div>
+
+                                            <div className="mb-3">
+                                                <label className="form-label fw-semibold">Dirección de entrega</label>
+                                                <textarea
+                                                    className="form-control"
+                                                    rows="2"
+                                                    value={datosCorreccion.direccion}
+                                                    onChange={(e) => handleCambioCorreccion("direccion", e.target.value)}
+                                                    disabled={guardandoCorreccion}
+                                                ></textarea>
+                                            </div>
+
+                                            <div className="row g-3">
+                                                <div className="col-12 col-md-6">
+                                                    <label className="form-label fw-semibold">Teléfono</label>
+                                                    <input
+                                                        type="tel"
+                                                        className="form-control"
+                                                        inputMode="numeric"
+                                                        placeholder="5555-5555"
+                                                        value={datosCorreccion.telefono_contacto}
+                                                        onChange={(e) => handleTelefonoCorreccion(e.target.value)}
+                                                        disabled={guardandoCorreccion}
+                                                    />
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <label className="form-label fw-semibold">Total estimado</label>
+                                                    <div className="input-group">
+                                                        <span className="input-group-text">Q</span>
+                                                        <input
+                                                            type="number"
+                                                            className="form-control"
+                                                            min="0.01"
+                                                            step="0.01"
+                                                            value={datosCorreccion.total}
+                                                            onChange={(e) => handleCambioCorreccion("total", e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (["-", "e", "E"].includes(e.key)) e.preventDefault();
+                                                            }}
+                                                            disabled={guardandoCorreccion}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="d-flex flex-column flex-sm-row justify-content-end gap-2 mt-3">
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-secondary"
+                                                    onClick={cancelarCorreccion}
+                                                    disabled={guardandoCorreccion}
+                                                >
+                                                    Cancelar edición
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-dark"
+                                                    onClick={handleGuardarCorreccion}
+                                                    disabled={guardandoCorreccion}
+                                                >
+                                                    {guardandoCorreccion ? "Guardando..." : "Guardar cambios"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="border-top pt-3">
+                                        <h6 className="fw-bold mb-2">Reactivar pedido</h6>
+                                        <p className="text-muted small mb-3">
+                                            Después de revisar o corregir los datos, selecciona un repartidor activo.
+                                        </p>
+
+                                        <div className="row g-2">
+                                            <div className="col-12 col-md-8">
+                                                <select
+                                                    className="form-select"
+                                                    value={repartidorSeleccionado[pedidoDetalle.id] || ""}
+                                                    onChange={(e) =>
+                                                        setRepartidorSeleccionado({
+                                                            ...repartidorSeleccionado,
+                                                            [pedidoDetalle.id]: e.target.value
+                                                        })
+                                                    }
+                                                    disabled={editandoPedido || guardandoCorreccion}
+                                                >
+                                                    <option value="">Seleccionar repartidor</option>
+                                                    {repartidores
+                                                        .filter((repartidor) => (repartidor.estado || "activo") === "activo")
+                                                        .map((repartidor, index) => (
+                                                            <option key={repartidor.id} value={repartidor.id}>
+                                                                REP-{index + 1} - {repartidor.nombre}
+                                                            </option>
+                                                        ))}
+                                                </select>
+                                            </div>
+                                            <div className="col-12 col-md-4">
+                                                <button
+                                                    className="btn btn-success w-100"
+                                                    onClick={() => handleReactivarPedido(pedidoDetalle)}
+                                                    disabled={
+                                                        editandoPedido ||
+                                                        guardandoCorreccion ||
+                                                        !repartidorSeleccionado[pedidoDetalle.id]
+                                                    }
+                                                >
+                                                    Reactivar pedido
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {pedidoDetalle.confirmacion_cliente === "problema" &&
+                                Number(pedidoDetalle.incidencia_resuelta) !== 1 && (
+                                    <div className="alert alert-danger rounded-4">
+                                        <div className="fw-bold mb-1">
+                                            <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                                            Cliente reportó un problema
+                                        </div>
+                                        <div>{pedidoDetalle.comentario_cliente || "Sin comentario adicional"}</div>
+                                    </div>
+                                )}
+
+                            {Number(pedidoDetalle.incidencia_resuelta) === 1 && (
+                                <div className="alert alert-success rounded-4">
+                                    <div className="fw-bold mb-2">
+                                        <i className="bi bi-check-circle-fill me-2"></i>
+                                        Incidencia resuelta
+                                    </div>
+                                    <div className="mb-2">
+                                        {pedidoDetalle.resolucion_admin || "Resolución registrada"}
+                                    </div>
+                                    <small>
+                                        {pedidoDetalle.fecha_resolucion
+                                            ? `Resuelta: ${formatearFecha(pedidoDetalle.fecha_resolucion)}`
+                                            : "Fecha de resolución no disponible"}
+                                    </small>
+                                </div>
+                            )}
+
+                            <div className="row g-3 mb-4">
+                                <div className="col-12 col-md-6">
+                                    <div className="bg-light rounded-4 p-3 h-100">
+                                        <small className="text-muted d-block">Cliente</small>
+                                        <strong>{pedidoDetalle.cliente_nombre || "No disponible"}</strong>
+                                    </div>
+                                </div>
+                                <div className="col-12 col-md-6">
+                                    <div className="bg-light rounded-4 p-3 h-100">
+                                        <small className="text-muted d-block">Repartidor</small>
+                                        <strong>{pedidoDetalle.repartidor_nombre || "Sin asignar"}</strong>
+                                    </div>
+                                </div>
+                                <div className="col-12 col-md-6">
+                                    <div className="bg-light rounded-4 p-3 h-100">
+                                        <small className="text-muted d-block">Servicio</small>
+                                        <strong className="text-capitalize">{pedidoDetalle.tipo_servicio}</strong>
+                                    </div>
+                                </div>
+                                <div className="col-12 col-md-6">
+                                    <div className="bg-light rounded-4 p-3 h-100">
+                                        <small className="text-muted d-block">Estado</small>
+                                        <span className={getEstadoBadge(pedidoDetalle.estado)}>
+                                            {pedidoDetalle.estado}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="border rounded-4 p-3 mb-3">
+                                <div className="fw-bold mb-1">
+                                    <i className="bi bi-shop me-2"></i>Recoger en
+                                </div>
+                                {pedidoDetalle.lugar_compra || "No registrado"}
+                            </div>
+
+                            <div className="border rounded-4 p-3 mb-3">
+                                <div className="fw-bold mb-1">
+                                    <i className="bi bi-bag me-2"></i>Descripción del pedido
+                                </div>
+                                {pedidoDetalle.descripcion || "Sin descripción"}
+                            </div>
+
+                            <div className="border rounded-4 p-3 mb-3">
+                                <div className="fw-bold mb-1">
+                                    <i className="bi bi-geo-alt me-2"></i>Dirección de entrega
+                                </div>
+                                {pedidoDetalle.direccion || "No registrada"}
+                            </div>
+
+                            <div className="border rounded-4 p-3 mb-4">
+                                <div className="fw-bold mb-1">
+                                    <i className="bi bi-telephone me-2"></i>Teléfono de contacto
+                                </div>
+                                {pedidoDetalle.telefono_contacto ? (
+                                    <a href={`tel:${pedidoDetalle.telefono_contacto}`}>
+                                        {pedidoDetalle.telefono_contacto}
+                                    </a>
+                                ) : (
+                                    "No registrado"
+                                )}
+                            </div>
+
+                            <div className="row g-3 mb-4">
+                                <div className="col-12 col-md-4">
+                                    <div className="text-center bg-light rounded-4 p-3 h-100">
+                                        <small className="text-muted d-block">Estimado</small>
+                                        <strong>{formatearDinero(pedidoDetalle.total)}</strong>
+                                    </div>
+                                </div>
+                                <div className="col-12 col-md-4">
+                                    <div className="text-center bg-light rounded-4 p-3 h-100">
+                                        <small className="text-muted d-block">Total real</small>
+                                        <strong>{formatearDinero(pedidoDetalle.total_real)}</strong>
+                                    </div>
+                                </div>
+                                <div className="col-12 col-md-4">
+                                    <div className="text-center bg-light rounded-4 p-3 h-100">
+                                        <small className="text-muted d-block">Diferencia</small>
+                                        <strong>{mostrarDiferencia(pedidoDetalle.diferencia)}</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="border-top pt-4">
+                                <div className="d-flex flex-wrap justify-content-between gap-2 mb-3">
+                                    <div>
+                                        <small className="text-muted d-block">Confirmación del cliente</small>
+                                        {getConfirmacionClienteBadge(pedidoDetalle.confirmacion_cliente)}
+                                    </div>
+                                    <div className="text-md-end">
+                                        <small className="text-muted d-block">Fecha de entrega</small>
+                                        <span>{formatearFecha(pedidoDetalle.fecha_entrega)}</span>
+                                    </div>
+                                </div>
+
+                                {pedidoDetalle.comentario_cliente && (
+                                    <div className="bg-light rounded-4 p-3 mb-3">
+                                        <small className="text-muted d-block mb-1">Comentario del cliente</small>
+                                        {pedidoDetalle.comentario_cliente}
+                                    </div>
+                                )}
+                            </div>
+
+                            {pedidoDetalle.confirmacion_cliente === "problema" &&
+                                Number(pedidoDetalle.incidencia_resuelta) !== 1 && (
+                                    <div className="border border-danger rounded-4 p-3 p-md-4 mt-3">
+                                        <h5 className="fw-bold text-danger">Resolver incidencia</h5>
+                                        <p className="text-muted small">
+                                            Escribe qué acción realizó el administrador para atender el problema.
+                                        </p>
+                                        <textarea
+                                            className="form-control mb-2"
+                                            rows="4"
+                                            maxLength="500"
+                                            value={resolucionIncidencia}
+                                            onChange={(e) => setResolucionIncidencia(e.target.value)}
+                                            placeholder="Ejemplo: Se contactó al cliente y se solucionó el inconveniente..."
+                                            disabled={resolviendoIncidencia}
+                                        ></textarea>
+                                        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                                            <small className="text-muted">
+                                                {resolucionIncidencia.length}/500
+                                            </small>
+                                            <button
+                                                className="btn btn-danger w-100 w-sm-auto"
+                                                onClick={handleResolverIncidencia}
+                                                disabled={resolviendoIncidencia || resolucionIncidencia.trim().length < 5}
+                                            >
+                                                {resolviendoIncidencia
+                                                    ? "Guardando..."
+                                                    : "Marcar incidencia resuelta"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                            <div className="d-flex justify-content-end mt-4">
+                                <button
+                                    className="btn btn-outline-secondary"
+                                    onClick={cerrarDetallePedido}
+                                    disabled={resolviendoIncidencia || guardandoCorreccion}
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

@@ -99,6 +99,26 @@ export const acceptOrder = async (orderId) => {
     return response.data;
 };
 
+export const cancelOrder = async (orderId) => {
+    const response = await api.put(
+        `/orders/${orderId}/cancel`,
+        {},
+        config()
+    );
+
+    return response.data;
+};
+
+export const rejectOrder = async (orderId) => {
+    const response = await api.put(
+        `/orders/${orderId}/reject`,
+        {},
+        config()
+    );
+
+    return response.data;
+};
+
 export const updateOrderStatus = async (orderId, estado) => {
     const response = await api.put(
         `/orders/${orderId}/status`,
@@ -111,14 +131,13 @@ export const updateOrderStatus = async (orderId, estado) => {
 
 export const confirmRealTotal = async (
     orderId,
-    totalReal,
-    totalEstimado
+    totalReal
 ) => {
+
     const response = await api.put(
         `/orders/${orderId}/confirm-total`,
         {
-            total_real: Number(totalReal),
-            total_estimado: Number(totalEstimado)
+            total_real: Number(totalReal)
         },
         config()
     );

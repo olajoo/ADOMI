@@ -19,15 +19,26 @@ function ClienteDashboard() {
     const [vista, setVista] = useState("crear");
 
     const [tipoServicio, setTipoServicio] = useState("restaurante");
+    const [lugarCompra, setLugarCompra] = useState("");
     const [descripcion, setDescripcion] = useState("");
     const [direccion, setDireccion] = useState("");
+    const [telefonoContacto, setTelefonoContacto] = useState("");
     const [total, setTotal] = useState("");
+
+    const [ubicacionCliente, setUbicacionCliente] = useState(null);
+    const [ubicacionConfirmada, setUbicacionConfirmada] = useState(false);
+    const [obteniendoUbicacion, setObteniendoUbicacion] = useState(false);
+    const [precisionUbicacion, setPrecisionUbicacion] = useState(null);
 
     const [pedidos, setPedidos] = useState([]);
     const [historial, setHistorial] = useState([]);
 
-    const [pedidoActivoSeleccionado, setPedidoActivoSeleccionado] = useState(null);
-    const [pedidoHistorialSeleccionado, setPedidoHistorialSeleccionado] = useState(null);
+    const [pedidoActivoSeleccionado, setPedidoActivoSeleccionado] =
+        useState(null);
+
+    const [pedidoHistorialSeleccionado, setPedidoHistorialSeleccionado] =
+        useState(null);
+
     const [ubicacionRepartidor, setUbicacionRepartidor] = useState(null);
 
     const [comentariosCliente, setComentariosCliente] = useState({});
@@ -41,13 +52,20 @@ function ClienteDashboard() {
         (pedido) =>
             pedido.estado === "pendiente" ||
             pedido.estado === "aceptado" ||
-            pedido.estado === "en camino"
+            pedido.estado === "en camino" ||
+            (
+                pedido.estado === "entregado" &&
+                !pedido.confirmacion_cliente
+            )
     );
 
     const pedidosFinalizados = pedidos.filter(
         (pedido) =>
-            pedido.estado === "entregado" ||
-            pedido.estado === "cancelado"
+            pedido.estado === "cancelado" ||
+            (
+                pedido.estado === "entregado" &&
+                Boolean(pedido.confirmacion_cliente)
+            )
     );
 
     const cargarPedidos = async () => {
@@ -63,13 +81,20 @@ function ClienteDashboard() {
                 );
 
                 if (actualizado) {
-                    if (
-                        actualizado.estado === "entregado" ||
-                        actualizado.estado === "cancelado"
+                    if (actualizado.estado === "cancelado") {
+                        setPedidoActivoSeleccionado(null);
+                        setPedidoHistorialSeleccionado(actualizado);
+                        setVista("historial");
+
+                        await cargarHistorial(actualizado.id);
+                    } else if (
+                        actualizado.estado === "entregado" &&
+                        actualizado.confirmacion_cliente
                     ) {
                         setPedidoActivoSeleccionado(null);
                         setPedidoHistorialSeleccionado(actualizado);
                         setVista("historial");
+
                         await cargarHistorial(actualizado.id);
                     } else {
                         setPedidoActivoSeleccionado(actualizado);
@@ -86,8 +111,8 @@ function ClienteDashboard() {
                     setPedidoHistorialSeleccionado(actualizado);
                 }
             }
-
         } catch (error) {
+            console.error(error);
             setError("No se pudieron cargar los pedidos");
         }
     };
@@ -95,8 +120,10 @@ function ClienteDashboard() {
     const cargarHistorial = async (pedidoId) => {
         try {
             const data = await getOrderHistory(pedidoId);
+
             setHistorial(data.historial || []);
         } catch (error) {
+            console.error(error);
             setError("No se pudo cargar el historial");
         }
     };
@@ -104,14 +131,22 @@ function ClienteDashboard() {
     const cargarUbicacion = async (repartidorId) => {
         try {
             const data = await getDeliveryLocation(repartidorId);
+
             setUbicacionRepartidor(data.ubicacion);
         } catch (error) {
+            console.error(error);
             setUbicacionRepartidor(null);
         }
     };
 
     useEffect(() => {
         cargarPedidos();
+
+        const interval = setInterval(() => {
+            cargarPedidos();
+        }, 5000);
+
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -125,7 +160,10 @@ function ClienteDashboard() {
             setPedidos((prevPedidos) =>
                 prevPedidos.map((pedido) =>
                     pedido.id === pedidoActualizado.id
-                        ? { ...pedido, ...pedidoActualizado }
+                        ? {
+                              ...pedido,
+                              ...pedidoActualizado
+                          }
                         : pedido
                 )
             );
@@ -139,9 +177,14 @@ function ClienteDashboard() {
                     ...pedidoActualizado
                 };
 
-                if (
-                    pedidoNuevo.estado === "entregado" ||
-                    pedidoNuevo.estado === "cancelado"
+                if (pedidoNuevo.estado === "cancelado") {
+                    setPedidoActivoSeleccionado(null);
+                    setPedidoHistorialSeleccionado(pedidoNuevo);
+                    setVista("historial");
+                    cargarHistorial(pedidoNuevo.id);
+                } else if (
+                    pedidoNuevo.estado === "entregado" &&
+                    pedidoNuevo.confirmacion_cliente
                 ) {
                     setPedidoActivoSeleccionado(null);
                     setPedidoHistorialSeleccionado(pedidoNuevo);
@@ -162,10 +205,13 @@ function ClienteDashboard() {
                 };
 
                 setPedidoHistorialSeleccionado(pedidoNuevo);
+
                 cargarHistorial(pedidoNuevo.id);
             }
 
-            setNotificacion(`Pedido #${pedidoActualizado.id} actualizado`);
+            setNotificacion(
+                `Pedido #${pedidoActualizado.id} actualizado`
+            );
 
             setTimeout(() => {
                 setNotificacion("");
@@ -175,10 +221,15 @@ function ClienteDashboard() {
         return () => {
             socket.off("pedidoActualizado");
         };
-    }, [pedidoActivoSeleccionado, pedidoHistorialSeleccionado]);
+    }, [
+        pedidoActivoSeleccionado,
+        pedidoHistorialSeleccionado
+    ]);
 
     useEffect(() => {
-        if (!pedidoActivoSeleccionado?.repartidor_id) return;
+        if (!pedidoActivoSeleccionado?.repartidor_id) {
+            return;
+        }
 
         if (
             pedidoActivoSeleccionado.estado === "entregado" ||
@@ -187,44 +238,166 @@ function ClienteDashboard() {
             return;
         }
 
-        cargarUbicacion(pedidoActivoSeleccionado.repartidor_id);
+        cargarUbicacion(
+            pedidoActivoSeleccionado.repartidor_id
+        );
 
         const interval = setInterval(() => {
-            cargarUbicacion(pedidoActivoSeleccionado.repartidor_id);
+            cargarUbicacion(
+                pedidoActivoSeleccionado.repartidor_id
+            );
         }, 5000);
 
         return () => clearInterval(interval);
     }, [pedidoActivoSeleccionado]);
+
+    const obtenerUbicacionCliente = () => {
+        setError("");
+        setMensaje("");
+
+        if (!navigator.geolocation) {
+            setError("Este dispositivo o navegador no permite obtener la ubicación.");
+            return;
+        }
+
+        setObteniendoUbicacion(true);
+        setUbicacionConfirmada(false);
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setUbicacionCliente({
+                    latitud: position.coords.latitude,
+                    longitud: position.coords.longitude
+                });
+                setPrecisionUbicacion(Number.isFinite(position.coords.accuracy) ? Math.round(position.coords.accuracy) : null);
+                setObteniendoUbicacion(false);
+            },
+            (geoError) => {
+                console.error(geoError);
+                setObteniendoUbicacion(false);
+                if (geoError.code === 1) setError("Debes permitir el acceso a tu ubicación para indicar el punto exacto de entrega.");
+                else if (geoError.code === 2) setError("No fue posible determinar tu ubicación. Activa el GPS e inténtalo nuevamente.");
+                else if (geoError.code === 3) setError("La ubicación tardó demasiado en responder. Inténtalo nuevamente.");
+                else setError("No se pudo obtener tu ubicación.");
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    };
+
+    const confirmarUbicacionCliente = () => {
+        if (!ubicacionCliente) {
+            setError("Primero debes obtener tu ubicación.");
+            return;
+        }
+        setUbicacionConfirmada(true);
+        setError("");
+        setMensaje("Ubicación exacta de entrega confirmada.");
+    };
 
     const handleCrearPedido = async (e) => {
         e.preventDefault();
 
         setMensaje("");
         setError("");
+
+        const lugarCompraLimpio = lugarCompra.trim();
+        const descripcionLimpia = descripcion.trim();
+        const direccionLimpia = direccion.trim();
+        const telefonoLimpio = telefonoContacto.replace(/\D/g, "");
+        const totalNumero = Number(total);
+
+        if (!lugarCompraLimpio) {
+            setError(
+                "Debe ingresar el nombre del restaurante o supermercado"
+            );
+            return;
+        }
+
+        if (lugarCompraLimpio.length > 150) {
+            setError(
+                "El lugar de compra no puede superar los 150 caracteres"
+            );
+            return;
+        }
+
+        if (!descripcionLimpia) {
+            setError(
+                "Debe ingresar la descripción del pedido"
+            );
+            return;
+        }
+
+        if (!direccionLimpia) {
+            setError(
+                "Debe ingresar la dirección de entrega"
+            );
+            return;
+        }
+
+        if (!/^\d{8}$/.test(telefonoLimpio)) {
+            setError(
+                "Debe ingresar un teléfono válido de 8 dígitos"
+            );
+            return;
+        }
+
+        if (
+            total === "" ||
+            !Number.isFinite(totalNumero)
+        ) {
+            setError(
+                "Debe ingresar un total estimado válido"
+            );
+            return;
+        }
+
+        if (totalNumero <= 0) {
+            setError(
+                "El total estimado debe ser mayor que Q0.00"
+            );
+            return;
+        }
+
+        if (!ubicacionCliente || !ubicacionConfirmada) {
+            setError("Debes compartir y confirmar la ubicación exacta de la entrega.");
+            return;
+        }
+
         setCargando(true);
 
         try {
             await createOrder({
                 tipo_servicio: tipoServicio,
-                descripcion,
-                direccion,
-                total: Number(total)
+                lugar_compra: lugarCompraLimpio,
+                descripcion: descripcionLimpia,
+                direccion: direccionLimpia,
+                telefono_contacto: telefonoLimpio,
+                total: totalNumero,
+                cliente_latitud: ubicacionCliente.latitud,
+                cliente_longitud: ubicacionCliente.longitud
             });
 
-            setMensaje("Pedido creado correctamente");
+            setMensaje(
+                "Pedido creado correctamente"
+            );
 
+            setLugarCompra("");
             setDescripcion("");
             setDireccion("");
+            setTelefonoContacto("");
             setTotal("");
             setTipoServicio("restaurante");
+            setUbicacionCliente(null);
+            setUbicacionConfirmada(false);
+            setPrecisionUbicacion(null);
 
             await cargarPedidos();
-            setVista("activo");
 
+            setVista("activo");
         } catch (error) {
             setError(
                 error.response?.data?.message ||
-                "Error al crear pedido"
+                    "Error al crear pedido"
             );
         } finally {
             setCargando(false);
@@ -233,23 +406,31 @@ function ClienteDashboard() {
 
     const seleccionarPedidoActivo = async (pedido) => {
         setPedidoActivoSeleccionado(pedido);
+
         setUbicacionRepartidor(null);
 
         if (pedido.repartidor_id) {
-            await cargarUbicacion(pedido.repartidor_id);
+            await cargarUbicacion(
+                pedido.repartidor_id
+            );
         }
     };
 
     const seleccionarPedidoHistorial = async (pedido) => {
         setPedidoHistorialSeleccionado(pedido);
+
         await cargarHistorial(pedido.id);
     };
 
-    const handleConfirmarRecepcion = async (pedido, confirmacion) => {
+    const handleConfirmarRecepcion = async (
+        pedido,
+        confirmacion
+    ) => {
         setMensaje("");
         setError("");
 
-        const comentario = comentariosCliente[pedido.id] || "";
+        const comentario =
+            comentariosCliente[pedido.id] || "";
 
         try {
             await confirmClientReception(
@@ -262,18 +443,25 @@ function ClienteDashboard() {
                 ...pedido,
                 confirmacion_cliente: confirmacion,
                 comentario_cliente: comentario,
-                fecha_confirmacion_cliente: new Date().toISOString()
+                fecha_confirmacion_cliente:
+                    new Date().toISOString()
             };
 
-            setPedidoHistorialSeleccionado(pedidoActualizado);
+            setPedidoHistorialSeleccionado(
+                pedidoActualizado
+            );
 
             setPedidos((prevPedidos) =>
                 prevPedidos.map((p) =>
-                    p.id === pedido.id ? pedidoActualizado : p
+                    p.id === pedido.id
+                        ? pedidoActualizado
+                        : p
                 )
             );
 
-            setMensaje("Respuesta enviada correctamente");
+            setMensaje(
+                "Respuesta enviada correctamente"
+            );
 
             setComentariosCliente({
                 ...comentariosCliente,
@@ -281,33 +469,55 @@ function ClienteDashboard() {
             });
 
             await cargarPedidos();
+
             await cargarHistorial(pedido.id);
 
+            setPedidoActivoSeleccionado(null);
+            setPedidoHistorialSeleccionado(pedidoActualizado);
+            setVista("historial");
         } catch (error) {
             setError(
                 error.response?.data?.message ||
-                "Error al confirmar recepción"
+                    "Error al confirmar recepción"
             );
         }
     };
 
     const cerrarSesion = () => {
         localStorage.clear();
+
         window.location.href = "/";
     };
 
     const getEstadoBadge = (estado) => {
-        if (estado === "pendiente") return "badge bg-secondary";
-        if (estado === "aceptado") return "badge bg-primary";
-        if (estado === "en camino") return "badge bg-warning text-dark";
-        if (estado === "entregado") return "badge bg-success";
-        if (estado === "cancelado") return "badge bg-danger";
+        if (estado === "pendiente") {
+            return "badge bg-secondary";
+        }
+
+        if (estado === "aceptado") {
+            return "badge bg-primary";
+        }
+
+        if (estado === "en camino") {
+            return "badge bg-warning text-dark";
+        }
+
+        if (estado === "entregado") {
+            return "badge bg-success";
+        }
+
+        if (estado === "cancelado") {
+            return "badge bg-danger";
+        }
 
         return "badge bg-dark";
     };
 
     const getDiferencia = (diferencia) => {
-        if (diferencia === null || diferencia === undefined) {
+        if (
+            diferencia === null ||
+            diferencia === undefined
+        ) {
             return "Pendiente";
         }
 
@@ -339,12 +549,14 @@ function ClienteDashboard() {
 
             <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
                 <div className="container-fluid px-4">
+
                     <span className="navbar-brand fw-bold">
                         <i className="bi bi-bag-check me-2"></i>
                         ADOMI Cliente
                     </span>
 
                     <div className="d-flex align-items-center gap-3">
+
                         <span className="text-white d-none d-md-block">
                             {user?.nombre}
                         </span>
@@ -355,6 +567,7 @@ function ClienteDashboard() {
                         >
                             Cerrar sesión
                         </button>
+
                     </div>
                 </div>
             </nav>
@@ -381,7 +594,9 @@ function ClienteDashboard() {
                 )}
 
                 <div className="card border-0 shadow-sm rounded-4 mb-4">
+
                     <div className="card-body p-4">
+
                         <h2 className="fw-bold mb-1">
                             Hola, {user?.nombre}
                         </h2>
@@ -389,19 +604,26 @@ function ClienteDashboard() {
                         <p className="text-muted mb-0">
                             Crea pedidos, sigue tus envíos activos y confirma tus entregas.
                         </p>
+
                     </div>
                 </div>
 
                 <div className="row g-3 mb-4">
 
                     <div className="col-12 col-md-4">
+
                         <button
                             className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
-                                vista === "crear" ? "border border-primary" : ""
+                                vista === "crear"
+                                    ? "border border-primary"
+                                    : ""
                             }`}
-                            onClick={() => setVista("crear")}
+                            onClick={() =>
+                                setVista("crear")
+                            }
                         >
                             <div className="card-body p-4">
+
                                 <div className="fs-1 text-primary mb-2">
                                     <i className="bi bi-plus-circle"></i>
                                 </div>
@@ -413,18 +635,26 @@ function ClienteDashboard() {
                                 <p className="text-muted mb-0">
                                     Inicia un nuevo pedido.
                                 </p>
+
                             </div>
                         </button>
+
                     </div>
 
                     <div className="col-12 col-md-4">
+
                         <button
                             className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
-                                vista === "activo" ? "border border-warning" : ""
+                                vista === "activo"
+                                    ? "border border-warning"
+                                    : ""
                             }`}
-                            onClick={() => setVista("activo")}
+                            onClick={() =>
+                                setVista("activo")
+                            }
                         >
                             <div className="card-body p-4">
+
                                 <div className="fs-1 text-warning mb-2">
                                     <i className="bi bi-truck"></i>
                                 </div>
@@ -436,18 +666,26 @@ function ClienteDashboard() {
                                 <p className="text-muted mb-0">
                                     {pedidosActivos.length} pedido(s) activo(s).
                                 </p>
+
                             </div>
                         </button>
+
                     </div>
 
                     <div className="col-12 col-md-4">
+
                         <button
                             className={`card border-0 shadow-sm rounded-4 w-100 text-start ${
-                                vista === "historial" ? "border border-success" : ""
+                                vista === "historial"
+                                    ? "border border-success"
+                                    : ""
                             }`}
-                            onClick={() => setVista("historial")}
+                            onClick={() =>
+                                setVista("historial")
+                            }
                         >
                             <div className="card-body p-4">
+
                                 <div className="fs-1 text-success mb-2">
                                     <i className="bi bi-clock-history"></i>
                                 </div>
@@ -459,16 +697,22 @@ function ClienteDashboard() {
                                 <p className="text-muted mb-0">
                                     {pedidosFinalizados.length} pedido(s) finalizado(s).
                                 </p>
+
                             </div>
                         </button>
+
                     </div>
 
                 </div>
 
                 {vista === "crear" && (
+
                     <div className="row justify-content-center">
+
                         <div className="col-12 col-xl-7">
+
                             <div className="card border-0 shadow-sm rounded-4">
+
                                 <div className="card-body p-4">
 
                                     <h4 className="fw-bold mb-3">
@@ -479,6 +723,7 @@ function ClienteDashboard() {
                                     <form onSubmit={handleCrearPedido}>
 
                                         <div className="mb-3">
+
                                             <label className="form-label fw-semibold">
                                                 Tipo de servicio
                                             </label>
@@ -486,7 +731,11 @@ function ClienteDashboard() {
                                             <select
                                                 className="form-select"
                                                 value={tipoServicio}
-                                                onChange={(e) => setTipoServicio(e.target.value)}
+                                                onChange={(e) =>
+                                                    setTipoServicio(
+                                                        e.target.value
+                                                    )
+                                                }
                                             >
                                                 <option value="restaurante">
                                                     Restaurante
@@ -496,9 +745,40 @@ function ClienteDashboard() {
                                                     Supermercado
                                                 </option>
                                             </select>
+
                                         </div>
 
                                         <div className="mb-3">
+
+                                            <label className="form-label fw-semibold">
+                                                <i className="bi bi-shop me-2 text-primary"></i>
+                                                Lugar de compra / recogida *
+                                            </label>
+
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder={
+                                                    tipoServicio === "restaurante"
+                                                        ? "Ejemplo: Pollo Campero Jalapa"
+                                                        : "Ejemplo: Supermercado La Torre"
+                                                }
+                                                value={lugarCompra}
+                                                maxLength="150"
+                                                onChange={(e) =>
+                                                    setLugarCompra(e.target.value)
+                                                }
+                                                required
+                                            />
+
+                                            <small className="text-muted">
+                                                Escribe el nombre del restaurante o supermercado donde se recogerá el pedido.
+                                            </small>
+
+                                        </div>
+
+                                        <div className="mb-3">
+
                                             <label className="form-label fw-semibold">
                                                 Descripción
                                             </label>
@@ -508,12 +788,18 @@ function ClienteDashboard() {
                                                 rows="4"
                                                 placeholder="Ejemplo: 2 hamburguesas, 1 gaseosa..."
                                                 value={descripcion}
-                                                onChange={(e) => setDescripcion(e.target.value)}
+                                                onChange={(e) =>
+                                                    setDescripcion(
+                                                        e.target.value
+                                                    )
+                                                }
                                                 required
                                             ></textarea>
+
                                         </div>
 
                                         <div className="mb-3">
+
                                             <label className="form-label fw-semibold">
                                                 Dirección
                                             </label>
@@ -523,17 +809,59 @@ function ClienteDashboard() {
                                                 className="form-control"
                                                 placeholder="Dirección de entrega"
                                                 value={direccion}
-                                                onChange={(e) => setDireccion(e.target.value)}
+                                                onChange={(e) =>
+                                                    setDireccion(
+                                                        e.target.value
+                                                    )
+                                                }
                                                 required
                                             />
+
+                                        </div>
+
+                                        <div className="mb-3">
+
+                                            <label className="form-label fw-semibold">
+                                                <i className="bi bi-telephone me-2 text-success"></i>
+                                                Teléfono de contacto *
+                                            </label>
+
+                                            <input
+                                                type="tel"
+                                                inputMode="numeric"
+                                                className="form-control"
+                                                placeholder="Ejemplo: 5555-5555"
+                                                value={telefonoContacto}
+                                                maxLength="9"
+                                                onChange={(e) => {
+                                                    const numeros = e.target.value
+                                                        .replace(/\D/g, "")
+                                                        .slice(0, 8);
+
+                                                    const formateado =
+                                                        numeros.length > 4
+                                                            ? `${numeros.slice(0, 4)}-${numeros.slice(4)}`
+                                                            : numeros;
+
+                                                    setTelefonoContacto(formateado);
+                                                }}
+                                                required
+                                            />
+
+                                            <small className="text-muted">
+                                                Se utilizará únicamente si el repartidor necesita comunicarse por una eventualidad con el pedido.
+                                            </small>
+
                                         </div>
 
                                         <div className="mb-4">
+
                                             <label className="form-label fw-semibold">
                                                 Total estimado
                                             </label>
 
                                             <div className="input-group">
+
                                                 <span className="input-group-text">
                                                     Q
                                                 </span>
@@ -543,34 +871,117 @@ function ClienteDashboard() {
                                                     className="form-control"
                                                     placeholder="65.00"
                                                     value={total}
-                                                    onChange={(e) => setTotal(e.target.value)}
+                                                    min="0.01"
+                                                    step="0.01"
+                                                    onChange={(e) => {
+                                                        const valor =
+                                                            e.target.value;
+
+                                                        if (
+                                                            valor === "" ||
+                                                            Number(valor) >= 0
+                                                        ) {
+                                                            setTotal(valor);
+                                                        }
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (
+                                                            e.key === "-" ||
+                                                            e.key === "e" ||
+                                                            e.key === "E"
+                                                        ) {
+                                                            e.preventDefault();
+                                                        }
+                                                    }}
                                                     required
                                                 />
+
+                                            </div>
+
+                                            <small className="text-muted">
+                                                Ingresa un monto mayor a Q0.00.
+                                            </small>
+
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <label className="form-label fw-semibold">
+                                                <i className="bi bi-geo-alt-fill text-danger me-2"></i>
+                                                Ubicación exacta de entrega
+                                            </label>
+
+                                            <div className="border rounded-4 p-3 bg-light">
+                                                <p className="text-muted small mb-3">
+                                                    Comparte el punto GPS donde deseas recibir el pedido. La dirección escrita seguirá sirviendo como referencia.
+                                                </p>
+
+                                                {!ubicacionCliente ? (
+                                                    <button type="button" className="btn btn-outline-primary w-100" onClick={obtenerUbicacionCliente} disabled={obteniendoUbicacion}>
+                                                        <i className="bi bi-crosshair me-2"></i>
+                                                        {obteniendoUbicacion ? "Obteniendo ubicación..." : "Usar mi ubicación actual"}
+                                                    </button>
+                                                ) : (
+                                                    <>
+                                                        <DeliveryMap latitud={ubicacionCliente.latitud} longitud={ubicacionCliente.longitud} titulo="Punto de entrega" altura="260px" />
+
+                                                        <div className={`alert ${ubicacionConfirmada ? "alert-success" : "alert-warning"} mt-3 mb-3`}>
+                                                            {ubicacionConfirmada ? (
+                                                                <><i className="bi bi-check-circle-fill me-2"></i>Ubicación de entrega confirmada.</>
+                                                            ) : (
+                                                                <><i className="bi bi-exclamation-triangle-fill me-2"></i>Revisa el mapa y confirma que este sea el lugar correcto.</>
+                                                            )}
+                                                            {precisionUbicacion !== null && <div className="small mt-1">Precisión aproximada del GPS: ± {precisionUbicacion} m</div>}
+                                                        </div>
+
+                                                        <div className="d-flex flex-column flex-md-row gap-2">
+                                                            <button type="button" className="btn btn-outline-secondary flex-fill" onClick={obtenerUbicacionCliente} disabled={obteniendoUbicacion}>
+                                                                <i className="bi bi-arrow-clockwise me-2"></i>
+                                                                {obteniendoUbicacion ? "Actualizando..." : "Obtener nuevamente"}
+                                                            </button>
+                                                            <button type="button" className="btn btn-success flex-fill" onClick={confirmarUbicacionCliente} disabled={ubicacionConfirmada}>
+                                                                <i className="bi bi-check-circle me-2"></i>
+                                                                {ubicacionConfirmada ? "Ubicación confirmada" : "Confirmar esta ubicación"}
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
 
                                         <button
+                                            type="submit"
                                             className="btn btn-primary w-100 py-2 fw-semibold"
-                                            disabled={cargando}
+                                            disabled={cargando || !ubicacionConfirmada}
                                         >
-                                            {cargando ? "Creando..." : "Crear pedido"}
+                                            {cargando
+                                                ? "Creando..."
+                                                : !ubicacionConfirmada
+                                                ? "Confirma tu ubicación para continuar"
+                                                : "Crear pedido"}
                                         </button>
 
                                     </form>
 
                                 </div>
                             </div>
+
                         </div>
+
                     </div>
                 )}
 
                 {vista === "activo" && (
+
                     <div className="row g-4">
 
                         <div className="col-12 col-xl-5">
+
                             <div className="card border-0 shadow-sm rounded-4">
+
                                 <div className="card-body p-4">
+
                                     <div className="d-flex justify-content-between align-items-center mb-3">
+
                                         <h4 className="fw-bold mb-0">
                                             Pedidos en curso
                                         </h4>
@@ -581,89 +992,158 @@ function ClienteDashboard() {
                                         >
                                             Actualizar
                                         </button>
+
                                     </div>
 
                                     {pedidosActivos.length === 0 ? (
+
                                         <p className="text-muted text-center py-4">
                                             No tienes pedidos activos.
                                         </p>
-                                    ) : (
-                                        pedidosActivos.map((pedido) => (
-                                            <button
-                                                key={pedido.id}
-                                                className={`card w-100 text-start border-0 shadow-sm rounded-4 mb-3 ${
-                                                    pedidoActivoSeleccionado?.id === pedido.id
-                                                        ? "border border-primary"
-                                                        : ""
-                                                }`}
-                                                onClick={() => seleccionarPedidoActivo(pedido)}
-                                            >
-                                                <div className="card-body">
-                                                    <div className="d-flex justify-content-between align-items-start">
-                                                        <div>
-                                                            <h5 className="fw-bold mb-1">
-                                                                Pedido #{pedido.id}
-                                                            </h5>
 
-                                                            <p className="text-muted mb-1 text-capitalize">
-                                                                {pedido.tipo_servicio}
-                                                            </p>
+                                    ) : (
+
+                                        pedidosActivos.map(
+                                            (pedido) => (
+
+                                                <button
+                                                    key={pedido.id}
+                                                    className={`card w-100 text-start border-0 shadow-sm rounded-4 mb-3 ${
+                                                        pedidoActivoSeleccionado?.id ===
+                                                        pedido.id
+                                                            ? "border border-primary"
+                                                            : ""
+                                                    }`}
+                                                    onClick={() =>
+                                                        seleccionarPedidoActivo(
+                                                            pedido
+                                                        )
+                                                    }
+                                                >
+
+                                                    <div className="card-body">
+
+                                                        <div className="d-flex justify-content-between align-items-start">
+
+                                                            <div>
+
+                                                                <h5 className="fw-bold mb-1">
+                                                                    Pedido #{pedido.id}
+                                                                </h5>
+
+                                                                <p className="text-muted mb-1 text-capitalize">
+                                                                    {pedido.tipo_servicio}
+                                                                </p>
+
+                                                                {pedido.lugar_compra && (
+                                                                    <div className="fw-semibold text-primary">
+                                                                        <i className="bi bi-shop me-1"></i>
+                                                                        {pedido.lugar_compra}
+                                                                    </div>
+                                                                )}
+
+                                                            </div>
+
+                                                            <span
+                                                                className={getEstadoBadge(
+                                                                    pedido.estado
+                                                                )}
+                                                            >
+                                                                {pedido.estado}
+                                                            </span>
+
                                                         </div>
 
-                                                        <span className={getEstadoBadge(pedido.estado)}>
-                                                            {pedido.estado}
-                                                        </span>
+                                                        <p className="mb-2">
+                                                            {pedido.descripcion}
+                                                        </p>
+
+                                                        <small className="text-muted">
+                                                            Total estimado: Q {pedido.total}
+                                                        </small>
+
                                                     </div>
 
-                                                    <p className="mb-2">
-                                                        {pedido.descripcion}
-                                                    </p>
-
-                                                    <small className="text-muted">
-                                                        Total estimado: Q {pedido.total}
-                                                    </small>
-                                                </div>
-                                            </button>
-                                        ))
+                                                </button>
+                                            )
+                                        )
                                     )}
+
                                 </div>
                             </div>
+
                         </div>
 
                         <div className="col-12 col-xl-7">
+
                             {!pedidoActivoSeleccionado ? (
+
                                 <div className="card border-0 shadow-sm rounded-4">
+
                                     <div className="card-body p-5 text-center">
+
                                         <i className="bi bi-truck fs-1 text-muted"></i>
 
                                         <p className="text-muted mt-3 mb-0">
                                             Selecciona un pedido en curso para ver mapa, chat y detalle.
                                         </p>
+
                                     </div>
+
                                 </div>
+
                             ) : (
+
                                 <>
+
                                     <div className="card border-0 shadow-sm rounded-4 mb-4">
+
                                         <div className="card-body p-4">
+
                                             <div className="d-flex justify-content-between align-items-start mb-3">
+
                                                 <div>
+
                                                     <h4 className="fw-bold mb-1">
                                                         Pedido #{pedidoActivoSeleccionado.id}
                                                     </h4>
 
-                                                    <p className="text-muted mb-0">
+                                                    {pedidoActivoSeleccionado.lugar_compra && (
+                                                        <h5 className="text-primary fw-bold mb-1">
+                                                            <i className="bi bi-shop me-2"></i>
+                                                            {pedidoActivoSeleccionado.lugar_compra}
+                                                        </h5>
+                                                    )}
+
+                                                    <p className="text-muted mb-1">
                                                         {pedidoActivoSeleccionado.direccion}
                                                     </p>
+
+                                                    {pedidoActivoSeleccionado.telefono_contacto && (
+                                                        <p className="mb-0">
+                                                            <i className="bi bi-telephone me-2 text-success"></i>
+                                                            {pedidoActivoSeleccionado.telefono_contacto}
+                                                        </p>
+                                                    )}
+
                                                 </div>
 
-                                                <span className={getEstadoBadge(pedidoActivoSeleccionado.estado)}>
+                                                <span
+                                                    className={getEstadoBadge(
+                                                        pedidoActivoSeleccionado.estado
+                                                    )}
+                                                >
                                                     {pedidoActivoSeleccionado.estado}
                                                 </span>
+
                                             </div>
 
                                             <div className="row g-3">
+
                                                 <div className="col-12 col-md-4">
+
                                                     <div className="bg-light rounded-4 p-3">
+
                                                         <small className="text-muted">
                                                             Estimado
                                                         </small>
@@ -671,90 +1151,215 @@ function ClienteDashboard() {
                                                         <h5 className="fw-bold mb-0">
                                                             Q {pedidoActivoSeleccionado.total}
                                                         </h5>
+
                                                     </div>
+
                                                 </div>
 
                                                 <div className="col-12 col-md-4">
+
                                                     <div className="bg-light rounded-4 p-3">
+
                                                         <small className="text-muted">
                                                             Real
                                                         </small>
 
                                                         <h5 className="fw-bold mb-0">
-                                                            {pedidoActivoSeleccionado.total_real
+                                                            {pedidoActivoSeleccionado.total_real !==
+                                                                null &&
+                                                            pedidoActivoSeleccionado.total_real !==
+                                                                undefined
                                                                 ? `Q ${pedidoActivoSeleccionado.total_real}`
                                                                 : "Pendiente"}
                                                         </h5>
+
                                                     </div>
+
                                                 </div>
 
                                                 <div className="col-12 col-md-4">
+
                                                     <div className="bg-light rounded-4 p-3">
+
                                                         <small className="text-muted">
                                                             Diferencia
                                                         </small>
 
                                                         <h5 className="fw-bold mb-0">
-                                                            {getDiferencia(pedidoActivoSeleccionado.diferencia)}
+                                                            {getDiferencia(
+                                                                pedidoActivoSeleccionado.diferencia
+                                                            )}
                                                         </h5>
+
                                                     </div>
+
                                                 </div>
+
                                             </div>
+
                                         </div>
+
                                     </div>
 
+                                    {pedidoActivoSeleccionado.estado === "entregado" &&
+                                        !pedidoActivoSeleccionado.confirmacion_cliente && (
+
+                                        <div className="card border-0 shadow-sm rounded-4 mb-4">
+
+                                            <div className="card-body p-4">
+
+                                                <div className="alert alert-success border-0 rounded-4">
+
+                                                    <h5 className="fw-bold mb-2">
+                                                        <i className="bi bi-box-seam me-2"></i>
+                                                        El repartidor marcó el pedido como entregado
+                                                    </h5>
+
+                                                    <p className="mb-0">
+                                                        Confirma si recibiste correctamente tu pedido o reporta si tuviste algún problema.
+                                                    </p>
+
+                                                </div>
+
+                                                <textarea
+                                                    className="form-control mb-3"
+                                                    rows="3"
+                                                    placeholder="Comentario opcional o describe el problema"
+                                                    value={
+                                                        comentariosCliente[
+                                                            pedidoActivoSeleccionado.id
+                                                        ] || ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setComentariosCliente((prev) => ({
+                                                            ...prev,
+                                                            [pedidoActivoSeleccionado.id]:
+                                                                e.target.value
+                                                        }))
+                                                    }
+                                                />
+
+                                                <div className="d-grid d-md-flex gap-2">
+
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-success flex-fill"
+                                                        onClick={() =>
+                                                            handleConfirmarRecepcion(
+                                                                pedidoActivoSeleccionado,
+                                                                "confirmado"
+                                                            )
+                                                        }
+                                                    >
+                                                        <i className="bi bi-check-circle me-2"></i>
+                                                        Sí, recibí mi pedido
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-outline-danger flex-fill"
+                                                        onClick={() =>
+                                                            handleConfirmarRecepcion(
+                                                                pedidoActivoSeleccionado,
+                                                                "problema"
+                                                            )
+                                                        }
+                                                    >
+                                                        <i className="bi bi-exclamation-triangle me-2"></i>
+                                                        Tuve un problema
+                                                    </button>
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    )}
+
                                     <div className="card border-0 shadow-sm rounded-4 mb-4">
+
                                         <div className="card-body p-4">
+
                                             <h4 className="fw-bold mb-3">
                                                 <i className="bi bi-geo-alt me-2 text-success"></i>
                                                 Ubicación del repartidor
                                             </h4>
 
                                             {!pedidoActivoSeleccionado.repartidor_id ? (
+
                                                 <p className="text-muted mb-0">
                                                     Aún no hay repartidor asignado.
                                                 </p>
+
                                             ) : !ubicacionRepartidor ? (
+
                                                 <p className="text-muted mb-0">
                                                     Ubicación no disponible.
                                                 </p>
+
                                             ) : (
+
                                                 <DeliveryMap
-                                                    latitud={ubicacionRepartidor.latitud}
-                                                    longitud={ubicacionRepartidor.longitud}
+                                                    latitud={
+                                                        ubicacionRepartidor.latitud
+                                                    }
+                                                    longitud={
+                                                        ubicacionRepartidor.longitud
+                                                    }
                                                 />
+
                                             )}
+
                                         </div>
+
                                     </div>
 
                                     <div className="card border-0 shadow-sm rounded-4">
+
                                         <div className="card-body p-4">
+
                                             <h4 className="fw-bold mb-3">
                                                 <i className="bi bi-chat-dots me-2 text-dark"></i>
                                                 Chat con repartidor
                                             </h4>
 
                                             {!pedidoActivoSeleccionado.repartidor_id ? (
+
                                                 <p className="text-muted mb-0">
                                                     El chat estará disponible cuando un repartidor acepte el pedido.
                                                 </p>
+
                                             ) : (
-                                                <OrderChat pedidoId={pedidoActivoSeleccionado.id} />
+
+                                                <OrderChat
+                                                    pedidoId={
+                                                        pedidoActivoSeleccionado.id
+                                                    }
+                                                />
+
                                             )}
+
                                         </div>
+
                                     </div>
+
                                 </>
                             )}
+
                         </div>
 
                     </div>
                 )}
 
                 {vista === "historial" && (
+
                     <div className="row g-4">
 
                         <div className="col-12 col-xl-5">
+
                             <div className="card border-0 shadow-sm rounded-4">
+
                                 <div className="card-body p-4">
 
                                     <h4 className="fw-bold mb-3">
@@ -762,133 +1367,220 @@ function ClienteDashboard() {
                                     </h4>
 
                                     {pedidosFinalizados.length === 0 ? (
+
                                         <p className="text-muted text-center py-4">
                                             Aún no tienes pedidos finalizados.
                                         </p>
-                                    ) : (
-                                        pedidosFinalizados.map((pedido) => (
-                                            <button
-                                                key={pedido.id}
-                                                className={`card w-100 text-start border-0 shadow-sm rounded-4 mb-3 ${
-                                                    pedidoHistorialSeleccionado?.id === pedido.id
-                                                        ? "border border-success"
-                                                        : ""
-                                                }`}
-                                                onClick={() => seleccionarPedidoHistorial(pedido)}
-                                            >
-                                                <div className="card-body">
-                                                    <div className="d-flex justify-content-between align-items-start">
-                                                        <div>
-                                                            <h5 className="fw-bold mb-1">
-                                                                Pedido #{pedido.id}
-                                                            </h5>
 
-                                                            <p className="text-muted mb-1 text-capitalize">
-                                                                {pedido.tipo_servicio}
-                                                            </p>
+                                    ) : (
+
+                                        pedidosFinalizados.map(
+                                            (pedido) => (
+
+                                                <button
+                                                    key={pedido.id}
+                                                    className={`card w-100 text-start border-0 shadow-sm rounded-4 mb-3 ${
+                                                        pedidoHistorialSeleccionado?.id ===
+                                                        pedido.id
+                                                            ? "border border-success"
+                                                            : ""
+                                                    }`}
+                                                    onClick={() =>
+                                                        seleccionarPedidoHistorial(
+                                                            pedido
+                                                        )
+                                                    }
+                                                >
+
+                                                    <div className="card-body">
+
+                                                        <div className="d-flex justify-content-between align-items-start">
+
+                                                            <div>
+
+                                                                <h5 className="fw-bold mb-1">
+                                                                    Pedido #{pedido.id}
+                                                                </h5>
+
+                                                                <p className="text-muted mb-1 text-capitalize">
+                                                                    {pedido.tipo_servicio}
+                                                                </p>
+
+                                                            </div>
+
+                                                            <span
+                                                                className={getEstadoBadge(
+                                                                    pedido.estado
+                                                                )}
+                                                            >
+                                                                {pedido.estado}
+                                                            </span>
+
                                                         </div>
 
-                                                        <span className={getEstadoBadge(pedido.estado)}>
-                                                            {pedido.estado}
-                                                        </span>
+                                                        <small className="text-muted">
+                                                            Total: Q{" "}
+                                                            {pedido.total_real ??
+                                                                pedido.total}
+                                                        </small>
+
                                                     </div>
 
-                                                    <small className="text-muted">
-                                                        Total: Q {pedido.total_real || pedido.total}
-                                                    </small>
-                                                </div>
-                                            </button>
-                                        ))
+                                                </button>
+                                            )
+                                        )
                                     )}
 
                                 </div>
+
                             </div>
+
                         </div>
 
                         <div className="col-12 col-xl-7">
 
                             {!pedidoHistorialSeleccionado ? (
+
                                 <div className="card border-0 shadow-sm rounded-4">
+
                                     <div className="card-body p-5 text-center">
+
                                         <i className="bi bi-receipt fs-1 text-muted"></i>
 
                                         <p className="text-muted mt-3 mb-0">
                                             Selecciona un pedido finalizado para confirmar recibido o reportar problema.
                                         </p>
+
                                     </div>
+
                                 </div>
+
                             ) : (
+
                                 <>
+
                                     <div className="card border-0 shadow-sm rounded-4 mb-4">
+
                                         <div className="card-body p-4">
+
                                             <h4 className="fw-bold mb-3">
                                                 Comprobante de entrega
                                             </h4>
 
-                                            {pedidoHistorialSeleccionado.estado === "cancelado" ? (
+                                            {pedidoHistorialSeleccionado.estado ===
+                                            "cancelado" ? (
+
                                                 <div className="alert alert-danger mb-0">
                                                     Este pedido fue cancelado.
                                                 </div>
+
                                             ) : (
+
                                                 <>
+
                                                     <p className="mb-2">
-                                                        <strong>Pedido:</strong> #{pedidoHistorialSeleccionado.id}
+                                                        <strong>
+                                                            Pedido:
+                                                        </strong>{" "}
+                                                        #
+                                                        {
+                                                            pedidoHistorialSeleccionado.id
+                                                        }
                                                     </p>
 
                                                     <p className="mb-2">
-                                                        <strong>Observación repartidor:</strong>{" "}
-                                                        {pedidoHistorialSeleccionado.observacion_entrega || "Sin observación"}
+                                                        <strong>
+                                                            Observación repartidor:
+                                                        </strong>{" "}
+                                                        {pedidoHistorialSeleccionado.observacion_entrega ||
+                                                            "Sin observación"}
                                                     </p>
 
                                                     <p className="mb-3">
-                                                        <strong>Fecha entrega:</strong>{" "}
+                                                        <strong>
+                                                            Fecha entrega:
+                                                        </strong>{" "}
                                                         {pedidoHistorialSeleccionado.fecha_entrega
-                                                            ? new Date(pedidoHistorialSeleccionado.fecha_entrega).toLocaleString()
+                                                            ? new Date(
+                                                                  pedidoHistorialSeleccionado.fecha_entrega
+                                                              ).toLocaleString()
                                                             : "Sin fecha"}
                                                     </p>
 
                                                     {pedidoHistorialSeleccionado.confirmacion_cliente ? (
+
                                                         <div className="alert alert-info mb-0">
+
                                                             <p className="mb-2">
-                                                                <strong>Respuesta enviada:</strong>{" "}
-                                                                {pedidoHistorialSeleccionado.confirmacion_cliente === "confirmado"
+
+                                                                <strong>
+                                                                    Respuesta enviada:
+                                                                </strong>{" "}
+
+                                                                {pedidoHistorialSeleccionado.confirmacion_cliente ===
+                                                                "confirmado"
                                                                     ? "Pedido recibido correctamente"
                                                                     : "Problema reportado"}
+
                                                             </p>
 
                                                             {pedidoHistorialSeleccionado.comentario_cliente && (
+
                                                                 <p className="mb-0">
-                                                                    <strong>Comentario:</strong>{" "}
-                                                                    {pedidoHistorialSeleccionado.comentario_cliente}
+
+                                                                    <strong>
+                                                                        Comentario:
+                                                                    </strong>{" "}
+
+                                                                    {
+                                                                        pedidoHistorialSeleccionado.comentario_cliente
+                                                                    }
+
                                                                 </p>
                                                             )}
 
                                                             {pedidoHistorialSeleccionado.fecha_confirmacion_cliente && (
+
                                                                 <small className="text-muted">
+
                                                                     {new Date(
                                                                         pedidoHistorialSeleccionado.fecha_confirmacion_cliente
                                                                     ).toLocaleString()}
+
                                                                 </small>
                                                             )}
+
                                                         </div>
+
                                                     ) : (
+
                                                         <>
+
                                                             <textarea
                                                                 className="form-control mb-3"
                                                                 rows="3"
                                                                 placeholder="Comentario opcional o describa el problema"
                                                                 value={
-                                                                    comentariosCliente[pedidoHistorialSeleccionado.id] || ""
+                                                                    comentariosCliente[
+                                                                        pedidoHistorialSeleccionado
+                                                                            .id
+                                                                    ] || ""
                                                                 }
                                                                 onChange={(e) =>
-                                                                    setComentariosCliente({
-                                                                        ...comentariosCliente,
-                                                                        [pedidoHistorialSeleccionado.id]: e.target.value
-                                                                    })
+                                                                    setComentariosCliente(
+                                                                        {
+                                                                            ...comentariosCliente,
+                                                                            [pedidoHistorialSeleccionado.id]:
+                                                                                e
+                                                                                    .target
+                                                                                    .value
+                                                                        }
+                                                                    )
                                                                 }
                                                             ></textarea>
 
                                                             <div className="d-flex flex-column flex-md-row gap-2">
+
                                                                 <button
                                                                     className="btn btn-success"
                                                                     onClick={() =>
@@ -912,50 +1604,86 @@ function ClienteDashboard() {
                                                                 >
                                                                     Reportar problema
                                                                 </button>
+
                                                             </div>
+
                                                         </>
                                                     )}
+
                                                 </>
                                             )}
+
                                         </div>
+
                                     </div>
 
                                     <div className="card border-0 shadow-sm rounded-4">
+
                                         <div className="card-body p-4">
+
                                             <h4 className="fw-bold mb-3">
                                                 Historial del pedido
                                             </h4>
 
                                             {historial.length === 0 ? (
+
                                                 <p className="text-muted mb-0">
                                                     Este pedido aún no tiene historial.
                                                 </p>
+
                                             ) : (
+
                                                 <ul className="list-group list-group-flush">
-                                                    {historial.map((item) => (
-                                                        <li
-                                                            className="list-group-item"
-                                                            key={item.id}
-                                                        >
-                                                            <div className="d-flex justify-content-between gap-2">
-                                                                <span className={getEstadoBadge(item.estado)}>
-                                                                    {item.estado}
-                                                                </span>
 
-                                                                <small className="text-muted">
-                                                                    {new Date(item.fecha).toLocaleString()}
-                                                                </small>
-                                                            </div>
+                                                    {historial.map(
+                                                        (item) => (
 
-                                                            <p className="mt-2 mb-0">
-                                                                {item.comentario}
-                                                            </p>
-                                                        </li>
-                                                    ))}
+                                                            <li
+                                                                className="list-group-item"
+                                                                key={
+                                                                    item.id
+                                                                }
+                                                            >
+
+                                                                <div className="d-flex justify-content-between gap-2">
+
+                                                                    <span
+                                                                        className={getEstadoBadge(
+                                                                            item.estado
+                                                                        )}
+                                                                    >
+                                                                        {
+                                                                            item.estado
+                                                                        }
+                                                                    </span>
+
+                                                                    <small className="text-muted">
+
+                                                                        {new Date(
+                                                                            item.fecha
+                                                                        ).toLocaleString()}
+
+                                                                    </small>
+
+                                                                </div>
+
+                                                                <p className="mt-2 mb-0">
+                                                                    {
+                                                                        item.comentario
+                                                                    }
+                                                                </p>
+
+                                                            </li>
+                                                        )
+                                                    )}
+
                                                 </ul>
                                             )}
+
                                         </div>
+
                                     </div>
+
                                 </>
                             )}
 

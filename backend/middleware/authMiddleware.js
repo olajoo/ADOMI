@@ -9,10 +9,25 @@ const verifyToken = (req, res, next) => {
         });
     }
 
-    const token = authHeader.split(" ")[1];
+    const parts = authHeader.split(" ");
+
+    if (
+        parts.length !== 2 ||
+        parts[0] !== "Bearer" ||
+        !parts[1]
+    ) {
+        return res.status(401).json({
+            message: "Formato de token inválido"
+        });
+    }
+
+    const token = parts[1];
 
     try {
-        const decoded = jwt.verify(token, "secretKey");
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
 
         req.user = decoded;
 
@@ -20,7 +35,7 @@ const verifyToken = (req, res, next) => {
 
     } catch (error) {
         return res.status(401).json({
-            message: "Token inválido"
+            message: "Token inválido o expirado"
         });
     }
 };

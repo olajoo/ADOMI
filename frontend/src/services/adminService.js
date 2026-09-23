@@ -58,23 +58,77 @@ export const updateUserStatus = async (userId, estado) => {
     return response.data;
 };
 
-export const createDeliveryUser = async (nombre, correo, password) => {
+export const createDeliveryUser = async (
+    nombre,
+    correo,
+    password
+) => {
     const response = await api.post(
-        "/auth/register",
+        "/admin/repartidores",
         {
             nombre,
             correo,
-            password,
-            rol: "repartidor"
-        }
+            password
+        },
+        config()
     );
 
     return response.data;
 };
 
+
+
 export const getAllOrdersAdmin = async () => {
     const response = await api.get(
         "/orders",
+        config()
+    );
+
+    return response.data;
+};
+
+
+
+export const resolveOrderIncident = async (
+    pedidoId,
+    resolucion
+) => {
+    const response = await api.patch(
+        `/admin/pedidos/${pedidoId}/resolver-incidencia`,
+        {
+            resolucion
+        },
+        config()
+    );
+
+    return response.data;
+};
+
+export const correctCancelledOrder = async (
+    pedidoId,
+    datos
+) => {
+    const response = await api.patch(
+        `/admin/pedidos/${pedidoId}/corregir`,
+        datos,
+        config()
+    );
+
+    return response.data;
+};
+
+export const createAdminUser = async (
+    nombre,
+    correo,
+    password
+) => {
+    const response = await api.post(
+        "/admin/administradores",
+        {
+            nombre,
+            correo,
+            password
+        },
         config()
     );
 

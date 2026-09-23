@@ -44,4 +44,46 @@ router.get(
     adminController.getDashboardStats
 );
 
+
+// ======================================================
+// RESOLVER INCIDENCIA DE PEDIDO
+// SOLO ADMIN
+// ======================================================
+
+router.patch(
+    "/pedidos/:id/resolver-incidencia",
+    verifyToken,
+    isAdmin,
+    adminController.resolveOrderIncident
+);
+
+
+// ======================================================
+// CORREGIR PEDIDO CANCELADO
+// SOLO ADMIN
+// ======================================================
+
+router.patch(
+    "/pedidos/:id/corregir",
+    verifyToken,
+    isAdmin,
+    adminController.correctCancelledOrder
+);
+
+
+router.post(
+    "/administradores",
+    verifyToken,
+    isAdmin,
+    adminController.createAdminUser
+);
+
+
+router.post(
+    "/repartidores",
+    verifyToken,
+    isAdmin,
+    adminController.createDeliveryUser
+);
+
 module.exports = router;

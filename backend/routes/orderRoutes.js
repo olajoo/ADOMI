@@ -102,6 +102,13 @@ router.put(
     orderController.rejectOrder
 );
 
+router.put(
+    "/:id/cancel",
+    verifyToken,
+    isRepartidor,
+    orderController.cancelOrder
+);
+
 // Compatibilidad
 router.put(
     "/:id/rechazar",
