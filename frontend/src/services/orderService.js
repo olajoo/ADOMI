@@ -35,6 +35,16 @@ export const getMyOrders = async () => {
     return response.data;
 };
 
+export const cancelClientOrder = async (orderId, motivo = "") => {
+    const response = await api.put(
+        `/orders/${orderId}/cancelar-cliente`,
+        { motivo },
+        config()
+    );
+
+    return response.data;
+};
+
 export const confirmClientReception = async (
     orderId,
     confirmacionCliente,
@@ -52,7 +62,6 @@ export const confirmClientReception = async (
     return response.data;
 };
 
-
 // =========================
 // HISTORIAL
 // =========================
@@ -65,7 +74,6 @@ export const getOrderHistory = async (orderId) => {
 
     return response.data;
 };
-
 
 // =========================
 // REPARTIDOR
@@ -129,37 +137,25 @@ export const updateOrderStatus = async (orderId, estado) => {
     return response.data;
 };
 
-export const confirmRealTotal = async (
-    orderId,
-    totalReal
-) => {
-
+export const confirmRealTotal = async (orderId, totalReal) => {
     const response = await api.put(
         `/orders/${orderId}/confirm-total`,
-        {
-            total_real: Number(totalReal)
-        },
+        { total_real: Number(totalReal) },
         config()
     );
 
     return response.data;
 };
 
-export const confirmDelivery = async (
-    orderId,
-    observacionEntrega
-) => {
+export const confirmDelivery = async (orderId, observacionEntrega) => {
     const response = await api.put(
         `/orders/${orderId}/confirmar-entrega`,
-        {
-            observacion_entrega: observacionEntrega
-        },
+        { observacion_entrega: observacionEntrega },
         config()
     );
 
     return response.data;
 };
-
 
 // =========================
 // ADMIN
@@ -174,15 +170,10 @@ export const getAllOrdersAdmin = async () => {
     return response.data;
 };
 
-export const reactivateCancelledOrder = async (
-    orderId,
-    repartidorId
-) => {
+export const reactivateCancelledOrder = async (orderId, repartidorId) => {
     const response = await api.put(
         `/orders/${orderId}/reactivar`,
-        {
-            repartidor_id: repartidorId
-        },
+        { repartidor_id: repartidorId },
         config()
     );
 

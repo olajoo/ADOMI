@@ -45,6 +45,13 @@ router.put(
     orderController.confirmClientReception
 );
 
+router.put(
+    "/:id/cancelar-cliente",
+    verifyToken,
+    isCliente,
+    orderController.cancelOrderByClient
+);
+
 
 // =========================
 // REPARTIDOR

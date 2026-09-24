@@ -567,6 +567,81 @@ const cancelOrder = (req, res) => {
 };
 
 // ======================================================
+// CANCELAR PEDIDO POR EL CLIENTE
+// PENDIENTE o ACEPTADO -> CANCELADO
+// ======================================================
+const cancelOrderByClient = (req, res) => {
+    const clienteId = req.user.id;
+    const pedidoId = req.params.id;
+    const motivo = String(req.body?.motivo || "").trim();
+
+    if (!pedidoIdValido(pedidoId)) {
+        return res.status(400).json({
+            message: "ID de pedido no válido"
+        });
+    }
+
+    if (motivo.length > 300) {
+        return res.status(400).json({
+            message: "El motivo no puede superar 300 caracteres"
+        });
+    }
+
+    orderModel.cancelOrderByClient(
+        pedidoId,
+        clienteId,
+        (err, result) => {
+            if (err) {
+                return responderErrorServidor(
+                    res,
+                    "Error al cancelar pedido",
+                    err
+                );
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(409).json({
+                    message:
+                        "Solo puede cancelar uno de sus pedidos mientras esté Pendiente o Aceptado"
+                });
+            }
+
+            const comentario = motivo
+                ? `Pedido cancelado por el cliente. Motivo: ${motivo}`
+                : "Pedido cancelado por el cliente";
+
+            historyModel.createHistory(
+                pedidoId,
+                "cancelado",
+                comentario,
+                (historyError) => {
+                    if (historyError) {
+                        console.error(
+                            "Error creando historial:",
+                            historyError
+                        );
+                    }
+                }
+            );
+
+            emitPedidoActualizado(
+                req,
+                pedidoId,
+                {
+                    estado: "cancelado",
+                    cancelado_por: "cliente"
+                }
+            );
+
+            return res.json({
+                message: "Pedido cancelado correctamente"
+            });
+        }
+    );
+};
+
+
+// ======================================================
 // ACTUALIZAR ESTADO
 // ACEPTADO -> EN CAMINO
 // ======================================================
@@ -1456,5 +1531,6 @@ module.exports = {
     reactivateCancelledOrder,
     getAllOrders,
     getOrderHistory,
-    cancelOrder
+    cancelOrder,
+    cancelOrderByClient
 };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { loginUser } from "../services/authService";
+import { loginUser, forgotPassword } from "../services/authService";
 import "./Login.css";
 
 function Login() {
@@ -8,6 +8,11 @@ function Login() {
     const [mensaje, setMensaje] = useState("");
     const [cargando, setCargando] = useState(false);
     const [mostrarPassword, setMostrarPassword] = useState(false);
+    const [recuperando, setRecuperando] = useState(false);
+    const [correoRecuperacion, setCorreoRecuperacion] = useState("");
+    const [enviandoRecuperacion, setEnviandoRecuperacion] = useState(false);
+    const [mensajeRecuperacion, setMensajeRecuperacion] = useState("");
+    const [errorRecuperacion, setErrorRecuperacion] = useState("");
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -32,13 +37,11 @@ function Login() {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-
         setMensaje("");
         setCargando(true);
 
         try {
             const data = await loginUser(correo, password);
-
             localStorage.setItem("token", data.token);
             localStorage.setItem("user", JSON.stringify(data.user));
 
@@ -60,6 +63,32 @@ function Login() {
         }
     };
 
+    const abrirRecuperacion = () => {
+        setCorreoRecuperacion(correo);
+        setMensajeRecuperacion("");
+        setErrorRecuperacion("");
+        setRecuperando(true);
+    };
+
+    const handleRecuperacion = async (e) => {
+        e.preventDefault();
+        setMensajeRecuperacion("");
+        setErrorRecuperacion("");
+        setEnviandoRecuperacion(true);
+
+        try {
+            const data = await forgotPassword(correoRecuperacion);
+            setMensajeRecuperacion(data.message);
+        } catch (error) {
+            setErrorRecuperacion(
+                error.response?.data?.message ||
+                    "No fue posible enviar el correo de recuperación"
+            );
+        } finally {
+            setEnviandoRecuperacion(false);
+        }
+    };
+
     return (
         <main className="adomi-login">
             <section className="adomi-login__hero" aria-hidden="true">
@@ -75,31 +104,20 @@ function Login() {
                         <span className="adomi-login__eyebrow">
                             Delivery simple y organizado
                         </span>
-
                         <h1>
                             Tus pedidos,
                             <br />
                             en un solo lugar.
                         </h1>
-
                         <p>
                             Solicita comida o abarrotes, sigue tu pedido y
                             mantente comunicado durante la entrega.
                         </p>
 
                         <div className="adomi-login__features">
-                            <span>
-                                <i className="bi bi-shop"></i>
-                                Restaurantes y abarrotes
-                            </span>
-                            <span>
-                                <i className="bi bi-geo-alt"></i>
-                                Seguimiento de entregas
-                            </span>
-                            <span>
-                                <i className="bi bi-chat-dots"></i>
-                                Comunicación en tiempo real
-                            </span>
+                            <span><i className="bi bi-shop"></i>Restaurantes y abarrotes</span>
+                            <span><i className="bi bi-geo-alt"></i>Seguimiento de entregas</span>
+                            <span><i className="bi bi-chat-dots"></i>Comunicación en tiempo real</span>
                         </div>
                     </div>
 
@@ -121,139 +139,185 @@ function Login() {
                         <span>ADOMI</span>
                     </div>
 
-                    <div className="adomi-login__heading">
-                        <span className="adomi-login__eyebrow adomi-login__eyebrow--dark">
-                            Bienvenido
-                        </span>
-                        <h2>Inicia sesión</h2>
-                        <p>
-                            Ingresa tus datos para continuar a tu cuenta.
-                        </p>
-                    </div>
-
-                    {mensaje && (
-                        <div
-                            className="adomi-login__alert"
-                            role="alert"
-                        >
-                            <i className="bi bi-exclamation-circle"></i>
-                            <span>{mensaje}</span>
-                        </div>
-                    )}
-
-                    <form
-                        className="adomi-login__form"
-                        onSubmit={handleLogin}
-                    >
-                        <div className="adomi-login__field">
-                            <label htmlFor="correo">
-                                Correo electrónico
-                            </label>
-
-                            <div className="adomi-login__input">
-                                <i className="bi bi-envelope"></i>
-
-                                <input
-                                    id="correo"
-                                    type="email"
-                                    autoComplete="email"
-                                    placeholder="correo@ejemplo.com"
-                                    value={correo}
-                                    onChange={(e) =>
-                                        setCorreo(e.target.value)
-                                    }
-                                    required
-                                />
+                    {!recuperando ? (
+                        <>
+                            <div className="adomi-login__heading">
+                                <span className="adomi-login__eyebrow adomi-login__eyebrow--dark">
+                                    Bienvenido
+                                </span>
+                                <h2>Inicia sesión</h2>
+                                <p>Ingresa tus datos para continuar a tu cuenta.</p>
                             </div>
-                        </div>
 
-                        <div className="adomi-login__field">
-                            <label htmlFor="password">
-                                Contraseña
-                            </label>
+                            {mensaje && (
+                                <div className="adomi-login__alert" role="alert">
+                                    <i className="bi bi-exclamation-circle"></i>
+                                    <span>{mensaje}</span>
+                                </div>
+                            )}
 
-                            <div className="adomi-login__input">
-                                <i className="bi bi-lock"></i>
+                            <form className="adomi-login__form" onSubmit={handleLogin}>
+                                <div className="adomi-login__field">
+                                    <label htmlFor="correo">Correo electrónico</label>
+                                    <div className="adomi-login__input">
+                                        <i className="bi bi-envelope"></i>
+                                        <input
+                                            id="correo"
+                                            type="email"
+                                            autoComplete="email"
+                                            placeholder="correo@ejemplo.com"
+                                            value={correo}
+                                            onChange={(e) => setCorreo(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                </div>
 
-                                <input
-                                    id="password"
-                                    type={
-                                        mostrarPassword
-                                            ? "text"
-                                            : "password"
-                                    }
-                                    autoComplete="current-password"
-                                    placeholder="Ingresa tu contraseña"
-                                    value={password}
-                                    onChange={(e) =>
-                                        setPassword(e.target.value)
-                                    }
-                                    required
-                                />
+                                <div className="adomi-login__field">
+                                    <label htmlFor="password">Contraseña</label>
+                                    <div className="adomi-login__input">
+                                        <i className="bi bi-lock"></i>
+                                        <input
+                                            id="password"
+                                            type={mostrarPassword ? "text" : "password"}
+                                            autoComplete="current-password"
+                                            placeholder="Ingresa tu contraseña"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            className="adomi-login__password-toggle"
+                                            onClick={() => setMostrarPassword((actual) => !actual)}
+                                            aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                            title={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                        >
+                                            <i className={`bi ${mostrarPassword ? "bi-eye-slash" : "bi-eye"}`}></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div style={{ textAlign: "right", marginTop: "-6px" }}>
+                                    <button
+                                        type="button"
+                                        onClick={abrirRecuperacion}
+                                        style={{
+                                            border: 0,
+                                            background: "transparent",
+                                            padding: 0,
+                                            fontWeight: 600,
+                                            cursor: "pointer"
+                                        }}
+                                    >
+                                        ¿Olvidaste tu contraseña?
+                                    </button>
+                                </div>
 
                                 <button
-                                    type="button"
-                                    className="adomi-login__password-toggle"
-                                    onClick={() =>
-                                        setMostrarPassword(
-                                            (actual) => !actual
-                                        )
-                                    }
-                                    aria-label={
-                                        mostrarPassword
-                                            ? "Ocultar contraseña"
-                                            : "Mostrar contraseña"
-                                    }
-                                    title={
-                                        mostrarPassword
-                                            ? "Ocultar contraseña"
-                                            : "Mostrar contraseña"
-                                    }
+                                    type="submit"
+                                    className="adomi-login__submit"
+                                    disabled={cargando}
                                 >
-                                    <i
-                                        className={`bi ${
-                                            mostrarPassword
-                                                ? "bi-eye-slash"
-                                                : "bi-eye"
-                                        }`}
-                                    ></i>
+                                    {cargando ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                            Ingresando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Iniciar sesión
+                                            <i className="bi bi-arrow-right"></i>
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+
+                            <div className="adomi-login__register">
+                                <span>¿Aún no tienes una cuenta?</span>
+                                <button
+                                    type="button"
+                                    onClick={() => (window.location.href = "/registro")}
+                                >
+                                    Crear cuenta
                                 </button>
                             </div>
-                        </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="adomi-login__heading">
+                                <span className="adomi-login__eyebrow adomi-login__eyebrow--dark">
+                                    Recuperación
+                                </span>
+                                <h2>Recupera tu contraseña</h2>
+                                <p>
+                                    Ingresa tu correo y te enviaremos un enlace
+                                    para crear una contraseña nueva.
+                                </p>
+                            </div>
 
-                        <button
-                            type="submit"
-                            className="adomi-login__submit"
-                            disabled={cargando}
-                        >
-                            {cargando ? (
-                                <>
-                                    <span
-                                        className="spinner-border spinner-border-sm"
-                                        aria-hidden="true"
-                                    ></span>
-                                    Ingresando...
-                                </>
-                            ) : (
-                                <>
-                                    Iniciar sesión
-                                    <i className="bi bi-arrow-right"></i>
-                                </>
+                            {mensajeRecuperacion && (
+                                <div className="alert alert-success border-0 rounded-4">
+                                    <i className="bi bi-check-circle me-2"></i>
+                                    {mensajeRecuperacion}
+                                </div>
                             )}
-                        </button>
-                    </form>
 
-                    <div className="adomi-login__register">
-                        <span>¿Aún no tienes una cuenta?</span>
-                        <button
-                            type="button"
-                            onClick={() =>
-                                (window.location.href = "/registro")
-                            }
-                        >
-                            Crear cuenta
-                        </button>
-                    </div>
+                            {errorRecuperacion && (
+                                <div className="adomi-login__alert" role="alert">
+                                    <i className="bi bi-exclamation-circle"></i>
+                                    <span>{errorRecuperacion}</span>
+                                </div>
+                            )}
+
+                            <form className="adomi-login__form" onSubmit={handleRecuperacion}>
+                                <div className="adomi-login__field">
+                                    <label htmlFor="correoRecuperacion">Correo electrónico</label>
+                                    <div className="adomi-login__input">
+                                        <i className="bi bi-envelope"></i>
+                                        <input
+                                            id="correoRecuperacion"
+                                            type="email"
+                                            autoComplete="email"
+                                            placeholder="correo@ejemplo.com"
+                                            value={correoRecuperacion}
+                                            onChange={(e) => setCorreoRecuperacion(e.target.value)}
+                                            required
+                                            disabled={enviandoRecuperacion}
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="adomi-login__submit"
+                                    disabled={enviandoRecuperacion}
+                                >
+                                    {enviandoRecuperacion ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                            Enviando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Enviar enlace
+                                            <i className="bi bi-send"></i>
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+
+                            <div className="adomi-login__register">
+                                <button
+                                    type="button"
+                                    onClick={() => setRecuperando(false)}
+                                >
+                                    <i className="bi bi-arrow-left me-2"></i>
+                                    Volver al inicio de sesión
+                                </button>
+                            </div>
+                        </>
+                    )}
 
                     <div className="adomi-login__security">
                         <i className="bi bi-shield-check"></i>

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClienteDashboard from "./pages/ClienteDashboard";
 import RepartidorDashboard from "./pages/RepartidorDashboard";
@@ -13,8 +14,8 @@ function App() {
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={<Login />} />
-
                 <Route path="/registro" element={<Register />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
                 <Route
                     path="/admin"

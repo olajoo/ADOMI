@@ -256,6 +256,31 @@ const cancelOrder = (
 
 
 // ======================================================
+// CANCELAR PEDIDO POR EL CLIENTE
+// Solo permite cancelar pedidos propios en PENDIENTE o ACEPTADO
+// ======================================================
+const cancelOrderByClient = (
+    pedidoId,
+    clienteId,
+    callback
+) => {
+    const sql = `
+        UPDATE pedidos
+        SET estado = 'cancelado'
+        WHERE id = ?
+        AND cliente_id = ?
+        AND estado IN ('pendiente', 'aceptado')
+    `;
+
+    db.query(
+        sql,
+        [pedidoId, clienteId],
+        callback
+    );
+};
+
+
+// ======================================================
 // CONFIRMAR TOTAL REAL
 // ======================================================
 
@@ -530,6 +555,7 @@ module.exports = {
     rejectOrder,
     markOnTheWay,
     cancelOrder,
+    cancelOrderByClient,
     confirmRealTotal,
     confirmDelivery,
     confirmClientReception,

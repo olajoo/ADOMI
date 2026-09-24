@@ -4,7 +4,8 @@ import {
     createOrder,
     getMyOrders,
     getOrderHistory,
-    confirmClientReception
+    confirmClientReception,
+    cancelClientOrder
 } from "../services/orderService";
 
 import { getDeliveryLocation } from "../services/locationService";
@@ -50,6 +51,9 @@ function ClienteDashboard() {
     const [notificacion, setNotificacion] = useState("");
     const [cargando, setCargando] = useState(false);
     const [panelPedido, setPanelPedido] = useState(null);
+    const [pedidoCancelar, setPedidoCancelar] = useState(null);
+    const [motivoCancelacion, setMotivoCancelacion] = useState("");
+    const [cancelandoPedido, setCancelandoPedido] = useState(false);
 
     const pedidosActivos = pedidos.filter(
         (pedido) =>
@@ -500,6 +504,38 @@ function ClienteDashboard() {
                 error.response?.data?.message ||
                     "Error al confirmar recepción"
             );
+        }
+    };
+
+    const handleCancelarPedidoCliente = async () => {
+        if (!pedidoCancelar) return;
+
+        setMensaje("");
+        setError("");
+        setCancelandoPedido(true);
+
+        try {
+            await cancelClientOrder(
+                pedidoCancelar.id,
+                motivoCancelacion.trim()
+            );
+
+            setMensaje(`Pedido #${pedidoCancelar.id} cancelado correctamente`);
+            setPedidoCancelar(null);
+            setMotivoCancelacion("");
+            setPedidoActivoSeleccionado(null);
+
+            await cargarPedidos();
+            await cargarHistorial(pedidoCancelar.id);
+
+            setVista("historial");
+        } catch (error) {
+            setError(
+                error.response?.data?.message ||
+                    "No se pudo cancelar el pedido"
+            );
+        } finally {
+            setCancelandoPedido(false);
         }
     };
 
@@ -1301,6 +1337,36 @@ function ClienteDashboard() {
 
                                     )}
 
+
+                                    {(pedidoActivoSeleccionado.estado === "pendiente" ||
+                                        pedidoActivoSeleccionado.estado === "aceptado") && (
+                                        <div className="card border-0 shadow-sm rounded-4 mb-3">
+                                            <div className="card-body p-3 p-md-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                                <div>
+                                                    <h5 className="fw-bold mb-1">
+                                                        <i className="bi bi-x-circle me-2 text-danger"></i>
+                                                        ¿Ya no necesitas este pedido?
+                                                    </h5>
+                                                    <p className="text-muted small mb-0">
+                                                        Puedes cancelarlo mientras aún no haya iniciado el recorrido de entrega.
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-danger flex-shrink-0"
+                                                    onClick={() => {
+                                                        setPedidoCancelar(pedidoActivoSeleccionado);
+                                                        setMotivoCancelacion("");
+                                                        setError("");
+                                                    }}
+                                                >
+                                                    <i className="bi bi-x-circle me-2"></i>
+                                                    Cancelar pedido
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="card border-0 shadow-sm rounded-4 adomi-client__tools-card">
                                         <div className="card-body p-3 p-md-4">
                                             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
@@ -1662,6 +1728,94 @@ function ClienteDashboard() {
                     </div>
                 )}
 
+
+
+                {pedidoCancelar && (
+                    <div
+                        className="adomi-client__overlay"
+                        onMouseDown={() => {
+                            if (!cancelandoPedido) {
+                                setPedidoCancelar(null);
+                                setMotivoCancelacion("");
+                            }
+                        }}
+                    >
+                        <div
+                            className="adomi-client__modal"
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <div className="adomi-client__modal-header">
+                                <div>
+                                    <small className="text-muted">Pedido #{pedidoCancelar.id}</small>
+                                    <h5 className="fw-bold mb-0">Cancelar pedido</h5>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn-close"
+                                    aria-label="Cerrar"
+                                    disabled={cancelandoPedido}
+                                    onClick={() => {
+                                        setPedidoCancelar(null);
+                                        setMotivoCancelacion("");
+                                    }}
+                                ></button>
+                            </div>
+
+                            <div className="adomi-client__modal-body">
+                                <div className="alert alert-warning border-0 rounded-4">
+                                    <i className="bi bi-exclamation-triangle me-2"></i>
+                                    Esta acción cancelará el pedido y lo moverá a tu historial.
+                                </div>
+
+                                <label className="form-label fw-semibold">
+                                    Motivo de cancelación
+                                    <span className="text-muted fw-normal"> (opcional)</span>
+                                </label>
+                                <textarea
+                                    className="form-control mb-3"
+                                    rows="3"
+                                    maxLength="300"
+                                    placeholder="Ejemplo: Ya no necesito el pedido"
+                                    value={motivoCancelacion}
+                                    disabled={cancelandoPedido}
+                                    onChange={(e) => setMotivoCancelacion(e.target.value)}
+                                ></textarea>
+
+                                <div className="d-flex flex-column flex-sm-row justify-content-end gap-2">
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-secondary"
+                                        disabled={cancelandoPedido}
+                                        onClick={() => {
+                                            setPedidoCancelar(null);
+                                            setMotivoCancelacion("");
+                                        }}
+                                    >
+                                        Volver
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-danger"
+                                        disabled={cancelandoPedido}
+                                        onClick={handleCancelarPedidoCliente}
+                                    >
+                                        {cancelandoPedido ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm me-2"></span>
+                                                Cancelando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="bi bi-x-circle me-2"></i>
+                                                Sí, cancelar pedido
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {panelPedido && pedidoActivoSeleccionado && (
                     <div className="adomi-client__overlay" onMouseDown={() => setPanelPedido(null)}>
