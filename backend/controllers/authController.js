@@ -1,11 +1,12 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
 const userModel = require("../models/userModel");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const limpiarTexto = (valor) =>
     typeof valor === "string" ? valor.trim() : "";
 
@@ -21,18 +22,12 @@ const RESPUESTA_RECUPERACION = {
     message: "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña."
 };
 
-const obtenerTransporter = () => {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
-        throw new Error("Las variables de correo no están configuradas");
+const obtenerResend = () => {
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error("RESEND_API_KEY no está configurada");
     }
 
-    return nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_APP_PASSWORD
-        }
-    });
+    return new Resend(process.env.RESEND_API_KEY);
 };
 
 const register = async (req, res) => {
@@ -233,14 +228,11 @@ const forgotPassword = (req, res) => {
                     const resetUrl =
                         `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
-                    const transporter = obtenerTransporter();
+                    const resend = obtenerResend();
 
-                    await transporter.sendMail({
-                        from: {
-                            name: "ADOMI",
-                            address: process.env.EMAIL_USER
-                        },
-                        to: user.correo,
+                    const { error } = await resend.emails.send({
+                        from: "ADOMI <onboarding@resend.dev>",
+                        to: [user.correo],
                         subject: "Restablece tu contraseña de ADOMI",
                         text:
                             `Hola ${user.nombre}.\n\n` +
@@ -257,6 +249,10 @@ const forgotPassword = (req, res) => {
                             `<p style="font-size:13px;color:#6c757d">Si no solicitaste este cambio, puedes ignorar este correo.</p>` +
                             `</div>`
                     });
+
+                    if (error) {
+                        throw new Error(`Resend: ${error.message}`);
+                    }
 
                     return res.status(200).json(RESPUESTA_RECUPERACION);
                 } catch (mailError) {
