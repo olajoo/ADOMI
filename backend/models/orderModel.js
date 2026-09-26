@@ -230,10 +230,6 @@ const markOnTheWay = (
 };
 
 
-// ======================================================
-// CANCELAR PEDIDO
-// ======================================================
-
 const cancelOrder = (
     pedidoId,
     repartidorId,
@@ -241,7 +237,9 @@ const cancelOrder = (
 ) => {
     const sql = `
         UPDATE pedidos
-        SET estado = 'cancelado'
+        SET
+            estado = 'cancelado',
+            cancelado_por = 'repartidor'
         WHERE id = ?
         AND repartidor_id = ?
         AND estado IN ('aceptado', 'en camino')
@@ -255,10 +253,6 @@ const cancelOrder = (
 };
 
 
-// ======================================================
-// CANCELAR PEDIDO POR EL CLIENTE
-// Solo permite cancelar pedidos propios en PENDIENTE o ACEPTADO
-// ======================================================
 const cancelOrderByClient = (
     pedidoId,
     clienteId,
@@ -266,7 +260,9 @@ const cancelOrderByClient = (
 ) => {
     const sql = `
         UPDATE pedidos
-        SET estado = 'cancelado'
+        SET
+            estado = 'cancelado',
+            cancelado_por = 'cliente'
         WHERE id = ?
         AND cliente_id = ?
         AND estado IN ('pendiente', 'aceptado')
@@ -280,9 +276,6 @@ const cancelOrderByClient = (
 };
 
 
-// ======================================================
-// CONFIRMAR TOTAL REAL
-// ======================================================
 
 const confirmRealTotal = (
     pedidoId,

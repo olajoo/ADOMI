@@ -44,11 +44,12 @@ router.get(
     adminController.getDashboardStats
 );
 
-
-// ======================================================
-// RESOLVER INCIDENCIA DE PEDIDO
-// SOLO ADMIN
-// ======================================================
+router.get(
+    "/reportes",
+    verifyToken,
+    isAdmin,
+    adminController.getReports
+);
 
 router.patch(
     "/pedidos/:id/resolver-incidencia",
@@ -57,12 +58,6 @@ router.patch(
     adminController.resolveOrderIncident
 );
 
-
-// ======================================================
-// CORREGIR PEDIDO CANCELADO
-// SOLO ADMIN
-// ======================================================
-
 router.patch(
     "/pedidos/:id/corregir",
     verifyToken,
@@ -70,14 +65,12 @@ router.patch(
     adminController.correctCancelledOrder
 );
 
-
 router.post(
     "/administradores",
     verifyToken,
     isAdmin,
     adminController.createAdminUser
 );
-
 
 router.post(
     "/repartidores",

@@ -429,20 +429,34 @@ function ClienteDashboard() {
     };
 
     const seleccionarPedidoActivo = async (pedido) => {
-        setPedidoActivoSeleccionado(pedido);
+        const esMovil = window.matchMedia("(max-width: 767.98px)").matches;
 
+        if (esMovil && pedidoActivoSeleccionado?.id === pedido.id) {
+            setPedidoActivoSeleccionado(null);
+            setUbicacionRepartidor(null);
+            setPanelPedido(null);
+            return;
+        }
+
+        setPedidoActivoSeleccionado(pedido);
         setUbicacionRepartidor(null);
+        setPanelPedido(null);
 
         if (pedido.repartidor_id) {
-            await cargarUbicacion(
-                pedido.repartidor_id
-            );
+            await cargarUbicacion(pedido.repartidor_id);
         }
     };
 
     const seleccionarPedidoHistorial = async (pedido) => {
-        setPedidoHistorialSeleccionado(pedido);
+        const esMovil = window.matchMedia("(max-width: 767.98px)").matches;
 
+        if (esMovil && pedidoHistorialSeleccionado?.id === pedido.id) {
+            setPedidoHistorialSeleccionado(null);
+            setHistorial([]);
+            return;
+        }
+
+        setPedidoHistorialSeleccionado(pedido);
         await cargarHistorial(pedido.id);
     };
 
@@ -603,22 +617,22 @@ function ClienteDashboard() {
     return (
         <div className="min-vh-100 bg-light adomi-client">
 
-            <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm adomi-client__navbar">
-                <div className="container-fluid px-4">
+            <nav className="adomi-client__topbar">
+                <div className="adomi-client__topbar-inner">
 
-                    <span className="navbar-brand fw-bold">
+                    <span className="adomi-client__brand">
                         <i className="bi bi-bag-check me-2"></i>
                         ADOMI Cliente
                     </span>
 
-                    <div className="d-flex align-items-center gap-3">
+                    <div className="adomi-client__topbar-actions">
 
-                        <span className="text-white d-none d-md-block">
+                        <span className="adomi-client__user-name d-none d-md-block">
                             {user?.nombre}
                         </span>
 
                         <button
-                            className="btn btn-outline-light btn-sm"
+                            className="adomi-client__logout"
                             onClick={cerrarSesion}
                         >
                             Cerrar sesión
@@ -628,7 +642,25 @@ function ClienteDashboard() {
                 </div>
             </nav>
 
-            <main className="container-fluid px-4 py-4 adomi-client__main">
+            <div className="adomi-client__layout">
+                <aside className="adomi-client__sidebar">
+                    <div className="adomi-client__sidebar-title">Menú</div>
+                    <button type="button" className={`adomi-client__side-link ${vista === "crear" ? "is-active" : ""}`} onClick={() => setVista("crear")}>
+                        <i className="bi bi-plus-circle"></i><span>Crear pedido</span>
+                    </button>
+                    <button type="button" className={`adomi-client__side-link ${vista === "activo" ? "is-active" : ""}`} onClick={() => setVista("activo")}>
+                        <i className="bi bi-truck"></i><span>En curso</span><b>{pedidosActivos.length}</b>
+                    </button>
+                    <button type="button" className={`adomi-client__side-link ${vista === "historial" ? "is-active" : ""}`} onClick={() => setVista("historial")}>
+                        <i className="bi bi-clock-history"></i><span>Historial</span>
+                    </button>
+                    <div className="adomi-client__sidebar-note">
+                        <i className="bi bi-shield-check"></i>
+                        <span>Pedidos y seguimiento en un solo lugar.</span>
+                    </div>
+                </aside>
+
+                <main className="adomi-client__main">
 
                 {notificacion && (
                     <div className="alert alert-info shadow-sm">
@@ -649,9 +681,9 @@ function ClienteDashboard() {
                     </div>
                 )}
 
-                <div className="card border-0 shadow-sm rounded-4 mb-4">
+                <div className="adomi-client__welcome">
 
-                    <div className="card-body p-4">
+                    <div className="adomi-client__welcome-body">
 
                         <h2 className="fw-bold mb-1">
                             Hola, {user?.nombre}
@@ -662,103 +694,6 @@ function ClienteDashboard() {
                         </p>
 
                     </div>
-                </div>
-
-                <div className="row g-3 mb-4">
-
-                    <div className="col-12 col-md-4">
-
-                        <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-client__nav-card ${
-                                vista === "crear"
-                                    ? "adomi-client__nav-card--active"
-                                    : ""
-                            }`}
-                            onClick={() =>
-                                setVista("crear")
-                            }
-                        >
-                            <div className="card-body p-4">
-
-                                <div className="fs-1 text-primary mb-2">
-                                    <i className="bi bi-plus-circle"></i>
-                                </div>
-
-                                <h5 className="fw-bold">
-                                    Crear pedido
-                                </h5>
-
-                                <p className="text-muted mb-0">
-                                    Inicia un nuevo pedido.
-                                </p>
-
-                            </div>
-                        </button>
-
-                    </div>
-
-                    <div className="col-12 col-md-4">
-
-                        <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-client__nav-card ${
-                                vista === "activo"
-                                    ? "adomi-client__nav-card--active"
-                                    : ""
-                            }`}
-                            onClick={() =>
-                                setVista("activo")
-                            }
-                        >
-                            <div className="card-body p-4">
-
-                                <div className="fs-1 text-warning mb-2">
-                                    <i className="bi bi-truck"></i>
-                                </div>
-
-                                <h5 className="fw-bold">
-                                    Pedido en curso
-                                </h5>
-
-                                <p className="text-muted mb-0">
-                                    {pedidosActivos.length} pedido(s) activo(s).
-                                </p>
-
-                            </div>
-                        </button>
-
-                    </div>
-
-                    <div className="col-12 col-md-4">
-
-                        <button
-                            className={`card border-0 shadow-sm rounded-4 w-100 text-start adomi-client__nav-card ${
-                                vista === "historial"
-                                    ? "adomi-client__nav-card--active"
-                                    : ""
-                            }`}
-                            onClick={() =>
-                                setVista("historial")
-                            }
-                        >
-                            <div className="card-body p-4">
-
-                                <div className="fs-1 text-success mb-2">
-                                    <i className="bi bi-clock-history"></i>
-                                </div>
-
-                                <h5 className="fw-bold">
-                                    Historial
-                                </h5>
-
-                                <p className="text-muted mb-0">
-                                    {pedidosFinalizados.length} pedido(s) finalizado(s).
-                                </p>
-
-                            </div>
-                        </button>
-
-                    </div>
-
                 </div>
 
                 {vista === "crear" && (
@@ -1068,7 +1003,7 @@ function ClienteDashboard() {
 
                                                 <button
                                                     key={pedido.id}
-                                                    className={`card w-100 text-start border-0 shadow-sm rounded-4 mb-3 ${
+                                                    className={`card w-100 text-start border-0 shadow-sm rounded-4 mb-3 adomi-client__order-card ${
                                                         pedidoActivoSeleccionado?.id ===
                                                         pedido.id
                                                             ? "border border-primary"
@@ -1081,9 +1016,9 @@ function ClienteDashboard() {
                                                     }
                                                 >
 
-                                                    <div className="card-body">
+                                                    <div className="card-body adomi-client__order-card-body">
 
-                                                        <div className="d-flex justify-content-between align-items-start">
+                                                        <div className="d-flex justify-content-between align-items-start gap-2">
 
                                                             <div>
 
@@ -1415,7 +1350,7 @@ function ClienteDashboard() {
 
                                                 <button
                                                     key={pedido.id}
-                                                    className={`card w-100 text-start border-0 shadow-sm rounded-4 mb-3 ${
+                                                    className={`card w-100 text-start border-0 shadow-sm rounded-4 mb-3 adomi-client__order-card ${
                                                         pedidoHistorialSeleccionado?.id ===
                                                         pedido.id
                                                             ? "border border-success"
@@ -1428,9 +1363,9 @@ function ClienteDashboard() {
                                                     }
                                                 >
 
-                                                    <div className="card-body">
+                                                    <div className="card-body adomi-client__order-card-body">
 
-                                                        <div className="d-flex justify-content-between align-items-start">
+                                                        <div className="d-flex justify-content-between align-items-start gap-2">
 
                                                             <div>
 
@@ -1730,6 +1665,19 @@ function ClienteDashboard() {
 
 
 
+                {vista !== "crear" && (
+                    <button
+                        type="button"
+                        className="adomi-client__fab"
+                        onClick={() => setVista("crear")}
+                        aria-label="Crear nuevo pedido"
+                        title="Crear nuevo pedido"
+                    >
+                        <i className="bi bi-plus-lg"></i>
+                        <span>Nuevo pedido</span>
+                    </button>
+                )}
+
                 {pedidoCancelar && (
                     <div
                         className="adomi-client__overlay"
@@ -1832,7 +1780,14 @@ function ClienteDashboard() {
                     </div>
                 )}
 
-            </main>
+                </main>
+            </div>
+
+            <nav className="adomi-client__bottom-nav" aria-label="Navegación del cliente">
+                <button type="button" className={vista === "crear" ? "is-active" : ""} onClick={() => setVista("crear")}><i className="bi bi-plus-circle"></i><span>Crear</span></button>
+                <button type="button" className={vista === "activo" ? "is-active" : ""} onClick={() => setVista("activo")}><i className="bi bi-truck"></i><span>En curso</span>{pedidosActivos.length > 0 && <b>{pedidosActivos.length}</b>}</button>
+                <button type="button" className={vista === "historial" ? "is-active" : ""} onClick={() => setVista("historial")}><i className="bi bi-clock-history"></i><span>Historial</span></button>
+            </nav>
 
         </div>
     );

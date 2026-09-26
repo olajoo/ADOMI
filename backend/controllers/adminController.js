@@ -523,6 +523,129 @@ const createDeliveryUser = async (req, res) => {
     }
 };
 
+const getReports = (req, res) => {
+    const fechaInicio = req.query.fecha_inicio;
+    const fechaFin = req.query.fecha_fin;
+
+    if (!fechaInicio || !fechaFin) {
+        return res.status(400).json({
+            message: "Debe indicar fecha_inicio y fecha_fin"
+        });
+    }
+
+    const formatoFecha = /^\d{4}-\d{2}-\d{2}$/;
+
+    if (
+        !formatoFecha.test(fechaInicio) ||
+        !formatoFecha.test(fechaFin)
+    ) {
+        return res.status(400).json({
+            message: "Las fechas deben tener formato YYYY-MM-DD"
+        });
+    }
+
+    if (fechaInicio > fechaFin) {
+        return res.status(400).json({
+            message: "La fecha inicial no puede ser mayor que la fecha final"
+        });
+    }
+
+    adminModel.getReportSummary(
+        fechaInicio,
+        fechaFin,
+        (err, summaryResults) => {
+            if (err) {
+                console.error("Error obteniendo resumen:", err);
+
+                return res.status(500).json({
+                    message: "Error al generar el reporte"
+                });
+            }
+
+            adminModel.getReportByService(
+                fechaInicio,
+                fechaFin,
+                (err, serviceResults) => {
+                    if (err) {
+                        console.error("Error obteniendo servicios:", err);
+
+                        return res.status(500).json({
+                            message: "Error al generar el reporte"
+                        });
+                    }
+
+                    adminModel.getReportByStatus(
+                        fechaInicio,
+                        fechaFin,
+                        (err, statusResults) => {
+                            if (err) {
+                                console.error("Error obteniendo estados:", err);
+
+                                return res.status(500).json({
+                                    message: "Error al generar el reporte"
+                                });
+                            }
+
+                            adminModel.getCourierPerformance(
+                                fechaInicio,
+                                fechaFin,
+                                (err, courierResults) => {
+                                    if (err) {
+                                        console.error(
+                                            "Error obteniendo repartidores:",
+                                            err
+                                        );
+
+                                        return res.status(500).json({
+                                            message: "Error al generar el reporte"
+                                        });
+                                    }
+
+                                    adminModel.getReportOrders(
+                                        fechaInicio,
+                                        fechaFin,
+                                        (err, orderResults) => {
+                                            if (err) {
+                                                console.error(
+                                                    "Error obteniendo pedidos:",
+                                                    err
+                                                );
+
+                                                return res.status(500).json({
+                                                    message: "Error al generar el reporte"
+                                                });
+                                            }
+
+                                            return res.json({
+                                                message:
+                                                    "Reporte generado correctamente",
+                                                periodo: {
+                                                    fecha_inicio: fechaInicio,
+                                                    fecha_fin: fechaFin
+                                                },
+                                                resumen:
+                                                    summaryResults[0],
+                                                por_servicio:
+                                                    serviceResults,
+                                                por_estado:
+                                                    statusResults,
+                                                repartidores:
+                                                    courierResults,
+                                                pedidos:
+                                                    orderResults
+                                            });
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
+};
+
 module.exports = {
     getAllUsers,
     getClients,
@@ -533,4 +656,5 @@ module.exports = {
     correctCancelledOrder,
     createAdminUser,
     createDeliveryUser,
+    getReports,
 };

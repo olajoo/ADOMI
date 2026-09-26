@@ -102,7 +102,7 @@ function Login() {
 
                     <div className="adomi-login__hero-copy">
                         <span className="adomi-login__eyebrow">
-                            Delivery simple y organizado
+                            Tu delivery de confianza
                         </span>
                         <h1>
                             Tus pedidos,

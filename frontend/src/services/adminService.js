@@ -134,3 +134,21 @@ export const createAdminUser = async (
 
     return response.data;
 };
+
+export const getReports = async (
+    fechaInicio,
+    fechaFin
+) => {
+    const response = await api.get(
+        "/admin/reportes",
+        {
+            ...config(),
+            params: {
+                fecha_inicio: fechaInicio,
+                fecha_fin: fechaFin
+            }
+        }
+    );
+
+    return response.data;
+};

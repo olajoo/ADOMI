@@ -20,18 +20,11 @@ import "./RepartidorDashboard.css";
 
 function RepartidorDashboard() {
 
-    // =====================================================
-    // USUARIO
-    // =====================================================
-
+    
     const user = JSON.parse(
         localStorage.getItem("user")
     );
 
-
-    // =====================================================
-    // ESTADOS GENERALES
-    // =====================================================
 
     const [vista, setVista] =
         useState("pendientes");
@@ -52,11 +45,6 @@ function RepartidorDashboard() {
         setHistorialSeleccionado
     ] = useState(null);
 
-
-    // =====================================================
-    // MENSAJES
-    // =====================================================
-
     const [mensaje, setMensaje] =
         useState("");
 
@@ -69,10 +57,6 @@ function RepartidorDashboard() {
     const [panelPedido, setPanelPedido] = useState(null);
 
 
-    // =====================================================
-    // FORMULARIOS
-    // =====================================================
-
     const [totalesReales, setTotalesReales] =
         useState({});
 
@@ -80,11 +64,6 @@ function RepartidorDashboard() {
         observacionesEntrega,
         setObservacionesEntrega
     ] = useState({});
-
-
-    // =====================================================
-    // UBICACIÓN
-    // =====================================================
 
     const [ubicacionActiva, setUbicacionActiva] =
         useState(false);
@@ -110,11 +89,6 @@ function RepartidorDashboard() {
     const ultimoEnvioUbicacionRef =
         useRef(0);
 
-
-    // =====================================================
-    // MODAL CONFIRMAR TOTAL
-    // =====================================================
-
     const [
         confirmacionTotal,
         setConfirmacionTotal
@@ -124,11 +98,6 @@ function RepartidorDashboard() {
         guardandoTotal,
         setGuardandoTotal
     ] = useState(false);
-
-
-    // =====================================================
-    // DATOS DERIVADOS
-    // =====================================================
 
     const entregasActivas = entregas.filter(
         (pedido) =>
@@ -143,19 +112,11 @@ function RepartidorDashboard() {
     );
 
 
-    // =====================================================
-    // LIMPIAR MENSAJES
-    // =====================================================
-
     const limpiarMensajes = () => {
         setMensaje("");
         setError("");
     };
 
-
-    // =====================================================
-    // CARGAR PEDIDOS
-    // =====================================================
 
     const cargarDatos = async () => {
 
@@ -250,10 +211,6 @@ function RepartidorDashboard() {
     };
 
 
-    // =====================================================
-    // CARGAR DATOS AL INICIAR
-    // =====================================================
-
     useEffect(() => {
 
         cargarDatos();
@@ -266,10 +223,6 @@ function RepartidorDashboard() {
 
     }, []);
 
-
-    // =====================================================
-    // SOCKET - UNIRSE A PEDIDOS
-    // =====================================================
 
     useEffect(() => {
 
@@ -299,10 +252,6 @@ function RepartidorDashboard() {
 
     }, [entregas]);
 
-
-    // =====================================================
-    // SOCKET - ACTUALIZACIONES
-    // =====================================================
 
     useEffect(() => {
 
@@ -404,10 +353,6 @@ function RepartidorDashboard() {
     }, []);
 
 
-    // =====================================================
-    // CERRAR SESIÓN
-    // =====================================================
-
     const cerrarSesion = () => {
 
         if (
@@ -425,10 +370,6 @@ function RepartidorDashboard() {
         window.location.href = "/";
     };
 
-
-    // =====================================================
-    // ACTIVAR UBICACIÓN
-    // =====================================================
 
     const compartirUbicacion = () => {
 
@@ -606,10 +547,6 @@ function RepartidorDashboard() {
     };
 
 
-    // =====================================================
-    // LIMPIAR GPS AL SALIR DEL COMPONENTE
-    // =====================================================
-
     useEffect(() => {
 
         return () => {
@@ -631,10 +568,6 @@ function RepartidorDashboard() {
 
     }, []);
 
-
-    // =====================================================
-    // VERIFICAR UBICACIÓN
-    // =====================================================
 
     const verificarUbicacion = () => {
 
@@ -658,10 +591,6 @@ function RepartidorDashboard() {
         return true;
     };
 
-
-    // =====================================================
-    // ACEPTAR PEDIDO
-    // =====================================================
 
     const handleAceptar = async (id) => {
 
@@ -697,10 +626,6 @@ function RepartidorDashboard() {
         }
     };
 
-
-    // =====================================================
-    // CANCELAR PEDIDO
-    // =====================================================
 
     const handleCancelarPedido = async (pedido) => {
         limpiarMensajes();
@@ -763,10 +688,6 @@ function RepartidorDashboard() {
         }
     };
 
-
-    // =====================================================
-    // CAMBIAR A EN CAMINO
-    // =====================================================
 
     const handleCambiarEstado =
         async (pedido) => {
@@ -840,10 +761,6 @@ function RepartidorDashboard() {
             }
         };
 
-
-    // =====================================================
-    // PREPARAR CONFIRMACIÓN TOTAL
-    // =====================================================
 
     const handleConfirmarTotal =
         (pedido) => {
@@ -953,10 +870,6 @@ function RepartidorDashboard() {
         };
 
 
-    // =====================================================
-    // GUARDAR TOTAL CONFIRMADO
-    // =====================================================
-
     const guardarTotalConfirmado =
         async () => {
 
@@ -1059,11 +972,6 @@ function RepartidorDashboard() {
                 );
             }
         };
-
-
-    // =====================================================
-    // CONFIRMAR ENTREGA
-    // =====================================================
 
     const handleConfirmarEntrega =
         async (pedido) => {
@@ -1195,10 +1103,6 @@ function RepartidorDashboard() {
         };
 
 
-    // =====================================================
-    // ESTILOS DE ESTADO
-    // =====================================================
-
     const getEstadoBadge =
         (estado) => {
 
@@ -1237,10 +1141,6 @@ function RepartidorDashboard() {
         };
 
 
-    // =====================================================
-    // CONFIRMACIÓN CLIENTE
-    // =====================================================
-
     const getConfirmacionCliente =
         (pedido) => {
 
@@ -1278,10 +1178,6 @@ function RepartidorDashboard() {
         };
 
 
-    // =====================================================
-    // FORMATO DINERO
-    // =====================================================
-
     const formatoDinero = (valor) => {
 
         const numero =
@@ -1297,10 +1193,6 @@ function RepartidorDashboard() {
         return `Q${numero.toFixed(2)}`;
     };
 
-
-    // =====================================================
-    // UBICACIÓN EXACTA DEL CLIENTE
-    // =====================================================
 
     const tieneUbicacionCliente = (pedido) => {
 
@@ -1323,11 +1215,6 @@ function RepartidorDashboard() {
             longitud <= 180
         );
     };
-
-
-    // =====================================================
-    // RENDER
-    // =====================================================
 
     return (
 
@@ -1389,7 +1276,35 @@ function RepartidorDashboard() {
                 CONTENIDO
             ========================================== */}
 
-            <main className="container-fluid px-3 px-md-4 py-3 py-md-4 adomi-driver__main">
+            <div className="adomi-driver__shell">
+
+                <aside className="adomi-driver__sidebar">
+                    <div className="adomi-driver__sidebar-title">MENÚ</div>
+
+                    <button type="button" className={`adomi-driver__side-link ${vista === "pendientes" ? "active" : ""}`} onClick={() => setVista("pendientes")}>
+                        <i className="bi bi-hourglass-split"></i>
+                        <span>Disponibles</span>
+                        <span className="adomi-driver__side-count">{pendientes.length}</span>
+                    </button>
+
+                    <button type="button" className={`adomi-driver__side-link ${vista === "activa" ? "active" : ""}`} onClick={() => setVista("activa")}>
+                        <i className="bi bi-truck"></i>
+                        <span>Mis entregas</span>
+                        <span className="adomi-driver__side-count">{entregasActivas.length}</span>
+                    </button>
+
+                    <button type="button" className={`adomi-driver__side-link ${vista === "historial" ? "active" : ""}`} onClick={() => setVista("historial")}>
+                        <i className="bi bi-clock-history"></i>
+                        <span>Historial</span>
+                    </button>
+
+                    <div className="adomi-driver__sidebar-note">
+                        <i className="bi bi-geo-alt"></i>
+                        <span>Activa tu ubicación para aceptar y gestionar entregas.</span>
+                    </div>
+                </aside>
+
+                <main className="container-fluid px-3 px-md-4 py-3 py-md-4 adomi-driver__main">
 
 
                 {/* NOTIFICACIONES */}
@@ -1601,96 +1516,6 @@ function RepartidorDashboard() {
                             </div>
 
                         )}
-
-                    </div>
-
-                </div>
-
-
-                {/* ======================================
-                    NAVEGACIÓN
-                ====================================== */}
-
-                <div className="row g-2 mb-4">
-
-
-                    <div className="col-4">
-
-                        <button
-                            type="button"
-                            className={`btn w-100 h-100 py-3 rounded-4 adomi-driver__tab ${
-                                vista === "pendientes"
-                                    ? "adomi-driver__tab--active"
-                                    : ""
-                            }`}
-                            onClick={() =>
-                                setVista("pendientes")
-                            }
-                        >
-
-                            <i className="bi bi-hourglass-split d-block fs-4 mb-1"></i>
-
-                            <span className="small fw-semibold">
-
-                                Pendientes
-
-                            </span>
-
-                        </button>
-
-                    </div>
-
-
-                    <div className="col-4">
-
-                        <button
-                            type="button"
-                            className={`btn w-100 h-100 py-3 rounded-4 adomi-driver__tab ${
-                                vista === "activa"
-                                    ? "adomi-driver__tab--active"
-                                    : ""
-                            }`}
-                            onClick={() =>
-                                setVista("activa")
-                            }
-                        >
-
-                            <i className="bi bi-truck d-block fs-4 mb-1"></i>
-
-                            <span className="small fw-semibold">
-
-                                Activas
-
-                            </span>
-
-                        </button>
-
-                    </div>
-
-
-                    <div className="col-4">
-
-                        <button
-                            type="button"
-                            className={`btn w-100 h-100 py-3 rounded-4 adomi-driver__tab ${
-                                vista === "historial"
-                                    ? "adomi-driver__tab--active"
-                                    : ""
-                            }`}
-                            onClick={() =>
-                                setVista("historial")
-                            }
-                        >
-
-                            <i className="bi bi-clock-history d-block fs-4 mb-1"></i>
-
-                            <span className="small fw-semibold">
-
-                                Historial
-
-                            </span>
-
-                        </button>
 
                     </div>
 
@@ -1987,8 +1812,8 @@ function RepartidorDashboard() {
                                                             : "border"
                                                     }`}
                                                     onClick={() =>
-                                                        setEntregaSeleccionada(
-                                                            pedido
+                                                        setEntregaSeleccionada((actual) =>
+                                                            actual?.id === pedido.id ? null : pedido
                                                         )
                                                     }
                                                 >
@@ -2089,6 +1914,10 @@ function RepartidorDashboard() {
 
                                         <div className="card-body p-3 p-md-4">
 
+
+                                            <button type="button" className="btn btn-link adomi-driver__back-mobile p-0 mb-3 text-decoration-none" onClick={() => setEntregaSeleccionada(null)}>
+                                                <i className="bi bi-arrow-left me-2"></i>Volver a mis entregas
+                                            </button>
 
                                             <div className="d-flex justify-content-between align-items-start mb-3">
 
@@ -2671,8 +2500,8 @@ function RepartidorDashboard() {
                                                             : "border"
                                                     }`}
                                                     onClick={() =>
-                                                        setHistorialSeleccionado(
-                                                            pedido
+                                                        setHistorialSeleccionado((actual) =>
+                                                            actual?.id === pedido.id ? null : pedido
                                                         )
                                                     }
                                                 >
@@ -2766,7 +2595,11 @@ function RepartidorDashboard() {
 
                                     <div className="card-body p-3 p-md-4">
 
-                                        <h4 className="fw-bold fs-5 mb-3">
+                                                                                <button type="button" className="btn btn-link adomi-driver__back-mobile p-0 mb-3 text-decoration-none" onClick={() => setHistorialSeleccionado(null)}>
+                                            <i className="bi bi-arrow-left me-2"></i>Volver al historial
+                                        </button>
+
+<h4 className="fw-bold fs-5 mb-3">
 
                                             Detalle de entrega
 
@@ -2922,7 +2755,22 @@ function RepartidorDashboard() {
                     </div>
                 )}
 
-            </main>
+                </main>
+
+                <nav className="adomi-driver__bottom-nav" aria-label="Navegación del repartidor">
+                    <button type="button" className={vista === "pendientes" ? "active" : ""} onClick={() => setVista("pendientes")}>
+                        <i className="bi bi-hourglass-split"></i><span>Disponibles</span>
+                    </button>
+                    <button type="button" className={vista === "activa" ? "active" : ""} onClick={() => setVista("activa")}>
+                        <i className="bi bi-truck"></i><span>Entregas</span>
+                        {entregasActivas.length > 0 && <b>{entregasActivas.length}</b>}
+                    </button>
+                    <button type="button" className={vista === "historial" ? "active" : ""} onClick={() => setVista("historial")}>
+                        <i className="bi bi-clock-history"></i><span>Historial</span>
+                    </button>
+                </nav>
+
+            </div>
 
 
             {/* ==========================================
